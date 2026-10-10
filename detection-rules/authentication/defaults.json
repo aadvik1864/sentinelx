@@ -1,0 +1,6 @@
+[
+  {"name":"SSH brute force","description":"Repeated authentication failures from the same source on the same target.","kind":"threshold","event_type":"authentication_failure","threshold":10,"window_seconds":300,"severity":"high","mitre_techniques":["T1110"]},
+  {"name":"Successful login after brute force","description":"Successful login after repeated failures for the same user, source, and target.","kind":"successful_after_failures","event_type":"authentication_success","threshold":10,"window_seconds":300,"severity":"critical","mitre_techniques":["T1110","T1078"]},
+  {"name":"Suspicious privilege escalation","description":"Privileged command activity. Review administrative intent before containment.","kind":"privilege_escalation","event_type":"privilege_escalation","threshold":1,"window_seconds":300,"severity":"high","mitre_techniques":["T1548.003"]},
+  {"name":"Unknown user authenticated","description":"Invalid user attempts followed by successful authentication.","kind":"suspicious_authentication","event_type":"authentication_success","threshold":5,"window_seconds":300,"severity":"critical","mitre_techniques":["T1110","T1078"]}
+]

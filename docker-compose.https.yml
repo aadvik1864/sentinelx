@@ -1,0 +1,31 @@
+# Opt-in HTTPS. Certificate/key paths must exist; nothing is generated or trusted automatically.
+# The existing HTTP gateway remains loopback-only for local collection and health checks.
+services:
+  backend:
+    environment:
+      ENVIRONMENT: production
+      COOKIE_SECURE: "true"
+      API_DOCS_ENABLED: "false"
+      DEMO_MODE: "false"
+      SEED_DEMO: "false"
+      ALLOWED_ORIGINS: ${HTTPS_ORIGIN:?Set the exact trusted HTTPS origin}
+      ALLOWED_HOSTS: ${HTTPS_HOST:?Set its hostname},localhost,127.0.0.1
+  nginx:
+    ports:
+      - "127.0.0.1:${HTTPS_PORT:-8443}:8443"
+    volumes:
+      - type: bind
+        source: ./docker/nginx/gateway-https.conf
+        target: /etc/nginx/conf.d/https.conf
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${TLS_CERT_FILE:?Set the fullchain certificate file}
+        target: /etc/nginx/tls/fullchain.pem
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${TLS_KEY_FILE:?Set the private key file}
+        target: /etc/nginx/tls/privkey.pem
+        read_only: true
+        bind: {create_host_path: false}

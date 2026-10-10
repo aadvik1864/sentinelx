@@ -1,0 +1,65 @@
+/* React Bits adaptations. Source and license: see LICENSE.md in this directory. */
+.card-spotlight {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+}
+
+.card-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    380px circle at var(--mouse-x) var(--mouse-y),
+    var(--spotlight-color),
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.card-spotlight:focus-within::before {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-spotlight:hover::before {
+    opacity: 1;
+  }
+}
+
+.count-up {
+  font-variant-numeric: tabular-nums;
+}
+
+.shape-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(#80aaff16 1px, transparent 1px),
+    linear-gradient(90deg, #80aaff16 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 55% 60%, black 15%, transparent 80%);
+}
+
+.shape-grid[data-rendered="true"] {
+  background-image: none;
+}
+
+.shape-grid-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-spotlight::before {
+    transition: none;
+  }
+}
