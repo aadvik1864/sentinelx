@@ -78,6 +78,11 @@ test("the overview and advanced tools stay usable on small screens", async ({ pa
   const errors = await mockWorkspace(page);
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "1 alert needs a review" })).toBeVisible();
+  await expect(page.locator(":root")).toHaveCSS("background-color", "rgb(32, 35, 41)");
+  await expect(page.locator(".sidebar")).toHaveCSS("background-color", "rgb(36, 39, 45)");
+  await expect(page.locator(".overview-alerts")).toHaveCSS("background-color", "rgb(43, 48, 56)");
+  await expect(page.locator(".nav-item.active > svg")).toHaveCSS("color", "rgb(227, 164, 120)");
+  await expect(page.locator(".badge.severity-high").first()).toHaveCSS("color", "rgb(246, 176, 123)");
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: "../docs/screenshots/overview-practice.png", fullPage: true, animations: "disabled" });
   await expect(page.getByRole("link", { name: "Alert rules", exact: true })).not.toBeVisible();
@@ -277,6 +282,7 @@ test("chart windows and quick navigation support keyboard exploration", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/dashboard");
   await expect(page.locator(".chart-summary")).toContainText("300 records");
+  await expect(page.locator(".recharts-area-curve")).toHaveCSS("stroke", "rgb(227, 164, 120)");
   await page.getByRole("radio", { name: "6 hours" }).check();
   await expect(page.locator(".chart-summary")).toContainText("129 records");
   await page.getByRole("radio", { name: "6 hours" }).focus();

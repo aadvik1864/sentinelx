@@ -42,8 +42,8 @@
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(#b1d1a416 1px, transparent 1px),
-    linear-gradient(90deg, #b1d1a416 1px, transparent 1px);
+    linear-gradient(#b6bcc514 1px, transparent 1px),
+    linear-gradient(90deg, #b6bcc514 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse at 55% 60%, black 15%, transparent 80%);
 }

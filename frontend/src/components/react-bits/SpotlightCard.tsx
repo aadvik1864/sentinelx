@@ -10,7 +10,7 @@ interface SpotlightCardProps extends PropsWithChildren {
 export function SpotlightCard({
   children,
   className = "",
-  spotlightColor = "rgba(177, 209, 164, 0.13)",
+  spotlightColor = "rgba(237, 239, 242, 0.06)",
 }: SpotlightCardProps) {
   const ref = useRef<HTMLDivElement>(null);
 

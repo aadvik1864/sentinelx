@@ -85,7 +85,7 @@ export function DashboardPage() {
         <>
           <SpotlightCard
             className={`overview-review ${data.active_alerts ? "has-alerts" : ""}`}
-            spotlightColor="rgba(177, 209, 164, 0.10)"
+            spotlightColor="rgba(237, 239, 242, 0.05)"
           >
             <span className="review-symbol">
               {data.active_alerts ? <ShieldAlert size={27} /> : <CheckCheck size={27} />}

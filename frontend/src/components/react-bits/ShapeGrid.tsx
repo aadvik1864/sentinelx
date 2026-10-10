@@ -14,8 +14,8 @@ interface ShapeGridProps {
 export function ShapeGrid({
   speed = 7,
   squareSize = 48,
-  borderColor = "rgba(177, 209, 164, 0.12)",
-  hoverFillColor = "rgba(155, 201, 173, 0.10)",
+  borderColor = "rgba(182, 188, 197, 0.08)",
+  hoverFillColor = "rgba(227, 164, 120, 0.06)",
   paused = false,
 }: ShapeGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);

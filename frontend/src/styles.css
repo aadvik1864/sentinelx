@@ -11,27 +11,27 @@
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
-  color: #f2efe5;
-  background: #17231d;
+  color: #edeff2;
+  background: #202329;
   font-size: 15px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   color-scheme: dark;
-  --canvas: #17231d;
-  --sidebar: #1a2c24;
-  --surface: #23382e;
-  --surface-raised: #2b4336;
-  --line: #41554a;
-  --control-line: #72826e;
-  --muted: #b7c3b5;
-  --text: #f2efe5;
-  --accent: #b1d1a4;
-  --accent-hover: #c7dfbe;
-  --accent-surface: #314735;
-  --accent-border: #7f9b7d;
+  --canvas: #202329;
+  --sidebar: #24272d;
+  --surface: #2b3038;
+  --surface-raised: #333944;
+  --line: #49505a;
+  --control-line: #7c838d;
+  --muted: #b6bcc5;
+  --text: #edeff2;
+  --accent: #e3a478;
+  --accent-hover: #f0bc97;
+  --accent-surface: #3e3834;
+  --accent-border: #b98d6e;
   --blue: var(--accent);
-  --teal: #9bc9ad;
+  --teal: #93c9b2;
   --critical: #ff8e9c;
   --high: #f6b07b;
   --medium: #e8cb7c;
@@ -183,7 +183,7 @@ code {
 }
 .button.primary {
   background: var(--accent);
-  color: #17231d;
+  color: var(--canvas);
   border-color: var(--accent);
 }
 .button.primary:hover {
@@ -513,6 +513,9 @@ code {
 .nav-item.active {
   color: var(--text);
   background: var(--accent-surface);
+}
+.nav-item.active > svg {
+  color: var(--accent);
 }
 .nav-item.active::before {
   content: "";
@@ -1368,7 +1371,7 @@ tbody tr:hover {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: #101912be;
+  background: #15171bd1;
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -2852,13 +2855,6 @@ tbody tr:hover {
   position: relative;
   overflow: hidden;
 }
-.login-story::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 65% 65%, #7f9b7d1f, transparent 65%);
-  pointer-events: none;
-}
 .login-story-top {
   display: flex;
   align-items: center;
@@ -2873,7 +2869,7 @@ tbody tr:hover {
   padding: 7px 9px;
   font-size: 10px;
   color: var(--muted);
-  background: #23382e80;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   white-space: nowrap;
@@ -2905,7 +2901,7 @@ tbody tr:hover {
 .signal-flow {
   padding: 16px 17px 0;
   margin-bottom: 30px;
-  background: #17231d80;
+  background: var(--canvas);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -2956,7 +2952,7 @@ tbody tr:hover {
   fill: var(--accent);
 }
 .signal-core-glow {
-  fill: var(--teal);
+  fill: var(--accent);
   opacity: 0.13;
 }
 .signal-core {
@@ -3018,8 +3014,8 @@ tbody tr:hover {
   padding: 32px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #23382e66;
-  box-shadow: 0 18px 60px #111c171f;
+  background: var(--surface);
+  box-shadow: 0 18px 60px #15171b1f;
 }
 .login-form-title {
   margin-bottom: 31px;

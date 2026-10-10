@@ -3,6 +3,10 @@ import type { DashboardMetrics } from "../src/types";
 
 test("React Bits sign-in supports motion controls and mobile layouts", async ({ page }) => {
   await page.goto("/login");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#24272d");
+  await expect(page.locator(".login-story")).toHaveCSS("background-color", "rgb(36, 39, 45)");
+  await expect(page.locator(".login-form-wrap")).toHaveCSS("background-color", "rgb(43, 48, 56)");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveCSS("background-color", "rgb(227, 164, 120)");
   await expect(page.locator('.shape-grid[data-rendered="true"]')).toBeVisible();
   await expect(page.getByRole("img", { name: /Computer, website, and app activity/ })).toBeVisible();
   await page.getByRole("button", { name: "Pause background animation", exact: true }).click();
