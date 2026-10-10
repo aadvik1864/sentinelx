@@ -348,3 +348,20 @@ test("connection filters are read-only and keep their state in the URL", async (
   }
   expect(errors).toEqual([]);
 });
+
+test("activity filters are distinct from the header's navigation search", async ({ page }) => {
+  const errors = await mockWorkspace(page);
+  await page.goto("/events");
+  await expect(page.getByRole("textbox", { name: "Search activity", exact: true })).toHaveCount(2);
+  const search = page.getByRole("main").getByRole("textbox", { name: "Search activity", exact: true });
+  const filtered = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/v1/events" && url.searchParams.get("q") === "source_ip:203.0.113.42";
+  });
+  await search.fill("source_ip:203.0.113.42");
+  await filtered;
+  await expect(search).toHaveValue("source_ip:203.0.113.42");
+  await expect(page.getByRole("banner").getByRole("textbox", { name: "Search activity", exact: true })).toHaveValue("");
+  await expect(page.locator("tbody")).toContainText("203.0.113.42");
+  expect(errors).toEqual([]);
+});

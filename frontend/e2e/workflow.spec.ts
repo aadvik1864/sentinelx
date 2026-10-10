@@ -171,6 +171,7 @@ test("event filters, event details, refresh session, and mobile navigation", asy
 }) => {
   await page.getByRole("link", { name: "Activity", exact: true }).click();
   await page
+    .getByRole("main")
     .getByRole("textbox", { name: "Search activity", exact: true })
     .fill("source_ip:203.0.113.42");
   await expect(page.locator("tbody tr").first()).toBeVisible();
