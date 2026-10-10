@@ -10,8 +10,8 @@ temporary_root = Path(tempfile.gettempdir())
 temporary_root.mkdir(parents=True, exist_ok=True)
 test_directory = tempfile.TemporaryDirectory(prefix="sentinelx-tests-", dir=temporary_root)
 os.environ["ENVIRONMENT"] = "test"
-os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL", f"sqlite:///{test_directory.name}/tests.db"
+os.environ["DATABASE_URL"] = (
+    os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{test_directory.name}/tests.db"
 )
 os.environ["JWT_SECRET"] = "test-only-secret-with-at-least-32-characters"
 os.environ["BOOTSTRAP_ADMIN_EMAIL"] = "admin@sentinelx.dev"
