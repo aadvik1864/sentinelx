@@ -7,7 +7,7 @@ SentinelX adapts four TypeScript components from [React Bits](https://reactbits.
 - [CountUp](https://reactbits.dev/text-animations/count-up): brief transitions between real, server-provided metrics using Motion. Screen readers always receive the final number, not intermediate animation values. Reduced motion displays values immediately.
 - [Stepper](https://reactbits.dev/components/stepper): short connection setup stages with controlled navigation, validation gates, a final review, focus management, and reduced-motion support. The one-time settings must be saved before proceeding; closing without them prompts a warning. Commands are instructions only and are never executed by the browser.
 
-The slate-blue palette and IBM Plex typography remain consistent with the evidence workspace. Motion is concentrated on sign-in, metric changes, and user-triggered step changes; investigation tables and timelines remain steady. The signal diagram on sign-in is illustrative, not a live feed.
+The forest-green surfaces, soft moss accents, warm light text, and IBM Plex typography stay consistent across sign-in, charts, tables, dialogs, and the evidence workspace. Priority colors remain distinct from the main accent. Motion is concentrated on sign-in, metric changes, and user-triggered step changes; investigation tables and timelines remain steady. The signal diagram on sign-in is illustrative, not a live feed.
 
 These adaptations are in `frontend/src/components/react-bits/`. Their upstream source is the [React Bits repository](https://github.com/DavidHDev/react-bits). Copyright David Haz; **MIT + Commons Clause**, with the full notice in that directory's `LICENSE.md`. SentinelX's own code remains MIT; the adapted components retain their upstream terms.
 
@@ -26,5 +26,12 @@ The overview focuses on alerts to review, system connections, and recent activit
 Display labels are centralized in `frontend/src/utils/labels.ts`; stored API values and permissions are unchanged. Critical/high/medium/low become **Urgent / Important / Moderate / Low priority**. Incidents are called **Investigations**. **Close investigation** records a decision; it does not fix a system. Assistant labels distinguish local generative AI, external AI, and deterministic offline summaries. Local output names its model and explains that selected evidence stays on the installation; configuration labels do not imply a successful readiness probe.
 
 The sidebar's **How to use SentinelX** guide explains the workflow without requiring security terminology. Empty and disconnected states explain the next step instead of suggesting that a lack of alerts guarantees safety.
+
+## Exploring without changing data
+
+- The overview's totals link to activity, alerts, or investigations; read-only users do not get an activity link.
+- The activity chart has native keyboard-accessible **6 / 12 / 24 hours** controls. It shows the selected recent hourly buckets and their sum; the overview totals keep their original 24-hour/persisted-state meaning. This does not change collection or imply every source is covered.
+- **Connected systems** can be filtered by attention needed, recent receiving status, or paused state, and searched by system/computer name. Filters are stored in the URL, can be cleared, and never pause or modify a connection.
+- **Go to** opens a page picker with **Ctrl/⌘ + K**. It searches page names, supports arrow keys/Enter/Escape, traps focus while open, restores focus when closed, and lists only pages available to the current role. It does not invoke assistant generation or execute actions.
 
 Public previews: [overview](screenshots/overview-practice.png), [mobile overview](screenshots/overview-mobile.png), [investigation](screenshots/plain-language-investigation.png), and [sign-in](screenshots/login.png). Overview/investigation previews use browser-only practice data, not live records. Installation-specific captures and the older recording remain local and are excluded from Git.

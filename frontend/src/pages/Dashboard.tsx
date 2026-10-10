@@ -15,6 +15,7 @@ import { useAuth } from "../store/AuthContext";
 import { CountUp } from "../components/react-bits/CountUp";
 import { SpotlightCard } from "../components/react-bits/SpotlightCard";
 import { SourceHealth } from "../components/SourceHealth";
+import { SegmentedControl } from "../components/SegmentedControl";
 import { api, errorMessage, reconcile } from "../services/api";
 import { priorityLabels } from "../utils/labels";
 import type {
@@ -31,12 +32,15 @@ export function DashboardPage() {
     user?.role === "VIEWER" ? null : "/sources",
   );
   const [simulating, setSimulating] = useState(false);
+  const [activityHours, setActivityHours] = useState(24);
   const notify = useToast();
   const navigate = useNavigate();
   const canInvestigate = user?.role !== "VIEWER";
   const connectionIssues = sources?.items.filter((source) =>
     ["offline", "error", "not_connected"].includes(source.status),
   ) ?? [];
+  const activity = data?.activity.slice(-activityHours) ?? [];
+  const shownRecords = activity.reduce((total, point) => total + point.events, 0);
 
   async function simulate() {
     setSimulating(true);
@@ -81,7 +85,7 @@ export function DashboardPage() {
         <>
           <SpotlightCard
             className={`overview-review ${data.active_alerts ? "has-alerts" : ""}`}
-            spotlightColor="rgba(128, 170, 255, 0.10)"
+            spotlightColor="rgba(177, 209, 164, 0.10)"
           >
             <span className="review-symbol">
               {data.active_alerts ? <ShieldAlert size={27} /> : <CheckCheck size={27} />}
@@ -106,7 +110,7 @@ export function DashboardPage() {
           {canInvestigate && (sourcesError ? (
             <ErrorBox message="We couldn’t check your system connections. Open Connected systems to try again." />
           ) : connectionIssues.length > 0 && (
-            <Link className="connection-attention" to="/sources">
+            <Link className="connection-attention" to="/sources?filter=attention">
               <Radio size={18} />
               <span>
                 {connectionIssues.length} {connectionIssues.length === 1 ? "system needs" : "systems need"} connection help.
@@ -118,12 +122,16 @@ export function DashboardPage() {
 
           <div className="overview-stats" aria-label="Overview totals">
             {[
-              { label: "Activity recorded", value: data.total_events, note: "In the last 24 hours" },
-              { label: "Alerts to review", value: data.active_alerts, note: "All current alerts" },
-              { label: "Open investigations", value: data.open_incidents, note: "Related activity being checked" },
+              { label: "Activity recorded", value: data.total_events, note: "In the last 24 hours", path: canInvestigate ? "/events" : null },
+              { label: "Alerts to review", value: data.active_alerts, note: "All current alerts", path: "/alerts" },
+              { label: "Open investigations", value: data.open_incidents, note: "Related activity being checked", path: "/incidents" },
             ].map((metric) => (
               <div className="metric" key={metric.label}>
-                <span className="metric-label">{metric.label}</span>
+                {metric.path ? (
+                  <Link className="metric-link" to={metric.path} aria-label={`View ${metric.label.toLowerCase()}`}>
+                    <span className="metric-label">{metric.label}</span><ArrowUpRight size={16} />
+                  </Link>
+                ) : <span className="metric-label">{metric.label}</span>}
                 <strong><CountUp to={metric.value} /></strong>
                 <span className="metric-note">{metric.note}</span>
               </div>
@@ -171,32 +179,41 @@ export function DashboardPage() {
           <section className="panel activity-panel simplified-chart">
             <div className="panel-heading">
               <div><h2>Activity over time</h2><p>Records received from your systems, grouped by when the activity happened.</p></div>
-              <span className="chart-legend">Last 24 hours</span>
+              <SegmentedControl
+                label="Activity window"
+                value={String(activityHours)}
+                options={[6, 12, 24].map((hours) => ({ value: String(hours), label: `${hours} hours` }))}
+                onChange={(value) => setActivityHours(Number(value))}
+              />
+            </div>
+            <div className="chart-summary" aria-live="polite">
+              <strong>{shownRecords.toLocaleString()} {shownRecords === 1 ? "record" : "records"}</strong>
+              <span>Shown in the last {activityHours} hourly buckets. Overview totals stay at 24 hours.</span>
             </div>
             <div className="activity-chart">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.activity} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
+                <AreaChart data={activity} accessibilityLayer margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
                   <defs>
                     <linearGradient id="event-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#80aaff" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="#80aaff" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.18} />
+                      <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="#27364c" vertical={false} strokeDasharray="3 5" />
+                  <CartesianGrid stroke="var(--line)" vertical={false} strokeDasharray="3 5" />
                   <XAxis
                     dataKey="timestamp"
                     tickFormatter={(value) => new Date(value).toLocaleTimeString(undefined, {
                       hour: "2-digit", minute: "2-digit", hour12: false,
                     })}
                     axisLine={false} tickLine={false} minTickGap={40}
-                    tick={{ fill: "#a7b8cc", fontSize: 12 }}
+                    tick={{ fill: "var(--muted)", fontSize: 12 }}
                   />
-                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fill: "#a7b8cc", fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fill: "var(--muted)", fontSize: 12 }} />
                   <Tooltip
-                    contentStyle={{ background: "#192940", border: "1px solid #344763", borderRadius: 8, color: "#e5edf8" }}
+                    contentStyle={{ background: "var(--surface-raised)", border: "1px solid var(--control-line)", borderRadius: 8, color: "var(--text)" }}
                     labelFormatter={(value) => new Date(value).toLocaleString()}
                   />
-                  <Area type="monotone" dataKey="events" name="Activity records" stroke="#80aaff" strokeWidth={2} fill="url(#event-fill)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="events" name="Activity records" stroke="var(--accent)" strokeWidth={2} fill="url(#event-fill)" isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

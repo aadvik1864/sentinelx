@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowDownToLine, Braces, Check, Copy, Globe, Plus, RefreshCw, ShieldCheck, Terminal,
+  ArrowDownToLine, Braces, Check, Copy, Globe, Plus, RefreshCw, Search, ShieldCheck, Terminal,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   ErrorBox, Loading, Modal, PageHeader, relative, time, useToast,
 } from "../components/ui";
 import { SourceIcon, SourceStatus } from "../components/SourceHealth";
+import { SegmentedControl } from "../components/SegmentedControl";
 import { Step, Stepper } from "../components/react-bits/Stepper";
 import { useResource } from "../hooks/useResource";
 import { api, errorMessage, reconcile } from "../services/api";
@@ -75,7 +76,32 @@ export function SourcesPage() {
   const [path, setPath] = useState(defaults.linux);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const filter = ["attention", "receiving", "paused"].includes(params.get("filter") ?? "") ? params.get("filter")! : "all";
+  const [query, setQuery] = useState(params.get("q") ?? "");
+  useEffect(() => {
+    // External navigation updates the search; our own delayed URL commits must
+    // not overwrite newer keystrokes in this synchronously controlled input.
+    if (!location.state?.sourceFilterChange) setQuery(params.get("q") ?? "");
+  }, [params, location.state]);
+  const items = data?.items ?? [];
+  const attention = (source: LogSource) => ["offline", "error", "not_connected"].includes(source.status);
+  const filtered = items.filter((source) => {
+    const matchesStatus = filter === "all" || filter === "attention" && attention(source) || source.status === filter;
+    return matchesStatus && `${source.name} ${source.hostname} ${systemType(source.kind)}`.toLowerCase().includes(query.toLowerCase().trim());
+  });
   const notify = useToast();
+
+  function updateFilter(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    if (query) next.set("q", query);
+    else next.delete("q");
+    if (!value || key === "filter" && value === "all") next.delete(key);
+    else next.set(key, value);
+    if (key === "q") setQuery(value);
+    setParams(next, { replace: true, state: { ...location.state, sourceFilterChange: true } });
+  }
 
   function chooseKind(value: LogSource["kind"]) {
     setKind(value);
@@ -171,9 +197,41 @@ export function SourcesPage() {
         <p>A website address alone is not enough. For one website, use its own activity file rather than a file shared by every website on the server. You may need the person who manages your hosting or server to finish setup.</p>
       </details>
       <ErrorBox message={error} retry={reload} />
+      {items.length > 0 && (
+        <div className="system-filter-bar">
+          <SegmentedControl
+            label="Filter systems"
+            value={filter}
+            options={[
+              { value: "all", label: "All systems", count: items.length },
+              { value: "attention", label: "Needs attention", count: items.filter(attention).length },
+              { value: "receiving", label: "Receiving", count: items.filter((source) => source.status === "receiving").length },
+              { value: "paused", label: "Paused", count: items.filter((source) => source.status === "paused").length },
+            ]}
+            onChange={(value) => updateFilter("filter", value)}
+          />
+          <label className="system-search">
+            <Search size={17} /><span className="sr-only">Find a system</span>
+            <input value={query} onChange={(event) => updateFilter("q", event.target.value)} placeholder="Name or computer name" maxLength={100} />
+          </label>
+          <p className="system-filter-count" role="status">Showing {filtered.length} of {items.length} systems</p>
+        </div>
+      )}
       {loading && !data ? <Loading label="Checking your system connections…" /> : data?.items.length ? (
         <div className="systems-list">
-          {data.items.map((source) => (
+          {!filtered.length && (
+            <div className="system-filter-empty">
+              <h2>No systems match these filters</h2>
+              <p>Try another name or show all of your connections.</p>
+              <button className="button secondary" onClick={() => {
+                const next = new URLSearchParams(params);
+                next.delete("q"); next.delete("filter");
+                setQuery("");
+                setParams(next, { replace: true, state: { ...location.state, sourceFilterChange: true } });
+              }}>Clear filters</button>
+            </div>
+          )}
+          {filtered.map((source) => (
             <article className="system-row" key={source.id}>
               <div className="system-row-heading">
                 <span className="source-kind-icon"><SourceIcon kind={source.kind} /></span>

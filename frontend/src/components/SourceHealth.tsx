@@ -44,7 +44,7 @@ export function SourceHealth({ sources, loading = false, error = null }: { sourc
       {loading ? <p className="compact-empty">Checking connections…</p> : error ? <p className="compact-empty">Connection information is unavailable. <Link className="text-link" to="/sources">Try Connected systems</Link></p> : sources.length ? (
         <div className="source-health-grid">
           {sources.map((source) => (
-            <Link to="/sources" className="source-health-item" key={source.id}>
+            <Link to={`/sources?q=${encodeURIComponent(source.name)}`} className="source-health-item" key={source.id}>
               <span className="source-kind-icon">
                 <SourceIcon kind={source.kind} />
               </span>

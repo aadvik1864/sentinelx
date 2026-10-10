@@ -260,3 +260,91 @@ test("administrator admission explains shared access and works on small screens"
   });
   expect(errors).toEqual([]);
 });
+
+test("chart windows and quick navigation support keyboard exploration", async ({ page }) => {
+  const errors = await mockWorkspace(page, async (route, path) => {
+    if (path !== "/dashboard") return false;
+    await route.fulfill({ json: {
+      total_events: 300, active_alerts: 1, critical_alerts: 0, open_incidents: 1,
+      monitored_assets: 0, unique_source_ips: 0, events_per_second: 0,
+      severity_counts: { critical: 0, high: 1, medium: 0, low: 0 }, top_ips: [],
+      activity: Array.from({ length: 24 }, (_, hour) => ({
+        timestamp: new Date(Date.UTC(2026, 9, 10, hour)).toISOString(), events: hour + 1,
+      })),
+    } });
+    return true;
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/dashboard");
+  await expect(page.locator(".chart-summary")).toContainText("300 records");
+  await page.getByRole("radio", { name: "6 hours" }).check();
+  await expect(page.locator(".chart-summary")).toContainText("129 records");
+  await page.getByRole("radio", { name: "6 hours" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "12 hours" })).toBeChecked();
+  await expect(page.locator(".chart-summary")).toContainText("222 records");
+  await expect(page.getByRole("link", { name: "View alerts to review" })).toHaveAttribute("href", "/alerts");
+  for (const width of [320, 390, 760, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+  await page.getByRole("button", { name: "Go to a page" }).click();
+  const dialog = page.getByRole("dialog", { name: "Go to a page" });
+  await expect(dialog.getByLabel("Find a page")).toBeFocused();
+  await dialog.getByLabel("Find a page").fill("Settings");
+  await page.keyboard.press("ArrowDown");
+  await expect(dialog.getByRole("button", { name: "Settings" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.keyboard.press("Control+k");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  const trigger = page.getByRole("button", { name: "Go to a page" });
+  await trigger.click();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Close dialog" })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Settings" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Close dialog" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
+test("connection filters are read-only and keep their state in the URL", async ({ page }) => {
+  const errors = await mockWorkspace(page, async (route, path) => {
+    if (path !== "/sources") return false;
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({ json: { items: [
+      { id: 1, name: "Practice Linux", kind: "linux", hostname: "practice-linux", enabled: true, status: "receiving", last_error: "", total_events: 10 },
+      { id: 2, name: "Practice website", kind: "nginx", hostname: "practice-web", enabled: true, status: "offline", last_error: "", total_events: 5 },
+    ] } });
+    return true;
+  });
+  await page.goto("/sources?filter=attention");
+  await expect(page.getByRole("radio", { name: "Needs attention" })).toBeChecked();
+  await expect(page.getByRole("heading", { name: "Practice website" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Practice Linux" })).toHaveCount(0);
+  // URL updates commit through the router's transition, not synchronously with the click.
+  await page.getByRole("radio", { name: "All systems" }).click();
+  await expect(page.getByRole("radio", { name: "All systems" })).toBeChecked();
+  await page.getByLabel("Find a system").pressSequentially("practice-linux");
+  await expect(page).toHaveURL(/q=practice-linux/);
+  await expect(page.getByLabel("Find a system")).toHaveValue("practice-linux");
+  await expect(page.getByRole("heading", { name: "Practice Linux" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Find a system")).toHaveValue("practice-linux");
+  await expect(page.getByRole("heading", { name: "Practice Linux" })).toBeVisible();
+  await page.getByRole("radio", { name: "Paused" }).click();
+  await expect(page.getByRole("radio", { name: "Paused" })).toBeChecked();
+  await expect(page.getByRole("heading", { name: "No systems match these filters" })).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByRole("status")).toHaveText("Showing 2 of 2 systems");
+  for (const width of [320, 390, 760, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+  expect(errors).toEqual([]);
+});

@@ -192,12 +192,14 @@ export function Modal({
   onClose,
   wide = false,
   drawer = false,
+  initialFocus,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
   drawer?: boolean;
+  initialFocus?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -210,7 +212,8 @@ export function Modal({
           'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex="0"]',
         ) ?? [],
       ).filter((element) => element.getClientRects().length > 0);
-    focusable()[0]?.focus();
+    const preferred = initialFocus ? ref.current?.querySelector<HTMLElement>(initialFocus) : null;
+    (preferred ?? focusable()[0])?.focus();
     function keydown(event: KeyboardEvent) {
       if (event.key === "Escape") closeRef.current();
       if (event.key === "Tab") {
@@ -240,7 +243,7 @@ export function Modal({
       document.body.style.overflow = overflow;
       previous?.focus();
     };
-  }, []);
+  }, [initialFocus]);
   return (
     <div
       className={`modal-backdrop ${drawer ? "drawer-backdrop" : ""}`}

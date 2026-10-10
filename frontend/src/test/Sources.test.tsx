@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SourceHealth } from "../components/SourceHealth";
 import { SourcesPage } from "../pages/Sources";
@@ -149,5 +149,51 @@ describe("guided source onboarding", () => {
     render(<MemoryRouter><SourceHealth sources={[{ ...source, status: "offline" }]} /></MemoryRouter>);
     expect(screen.getByText("Disconnected")).toBeVisible();
     expect(screen.getByText("No activity received yet")).toBeVisible();
+  });
+
+  it("filters connection issues and searches names without changing any source", () => {
+    mocks.sources = [
+      source,
+      { ...source, id: 8, name: "Disconnected app", kind: "application", hostname: "app-server", status: "offline" },
+      { ...source, id: 9, name: "Busy computer", kind: "linux", hostname: "linux-server", status: "receiving" },
+    ];
+    page();
+    fireEvent.click(screen.getByRole("radio", { name: "Needs attention" }));
+    expect(screen.getByRole("heading", { name: "Disconnected app" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "My site" })).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 of 3 systems");
+    fireEvent.click(screen.getByRole("radio", { name: "All systems" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Find a system" }), { target: { value: "linux-server" } });
+    expect(screen.getByRole("heading", { name: "Busy computer" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Disconnected app" })).toBeNull();
+    expect(mocks.patch).not.toHaveBeenCalled();
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
+
+  it("clears an empty filter without pretending the workspace has no systems", () => {
+    mocks.sources = [source];
+    page();
+    fireEvent.click(screen.getByRole("radio", { name: "Paused" }));
+    expect(screen.getByRole("heading", { name: "No systems match these filters" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Connect your first system" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByRole("heading", { name: "My site" })).toBeVisible();
+    expect(screen.getByRole("radio", { name: "All systems" })).toBeChecked();
+  });
+
+  it("updates search from an external page link and clears its local text", () => {
+    mocks.sources = [source];
+    render(<MemoryRouter initialEntries={["/sources?q=missing"]}>
+      <Link to="/sources?q=web-server">Open linked system</Link>
+      <SourcesPage />
+    </MemoryRouter>);
+    expect(screen.getByRole("textbox", { name: "Find a system" })).toHaveValue("missing");
+    fireEvent.click(screen.getByRole("link", { name: "Open linked system" }));
+    expect(screen.getByRole("textbox", { name: "Find a system" })).toHaveValue("web-server");
+    expect(screen.getByRole("heading", { name: "My site" })).toBeVisible();
+    fireEvent.click(screen.getByRole("radio", { name: "Paused" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByRole("textbox", { name: "Find a system" })).toHaveValue("");
+    expect(screen.getByRole("heading", { name: "My site" })).toBeVisible();
   });
 });

@@ -16,6 +16,7 @@ It is a learning project, not a replacement for a production security platform. 
 - Keeps notes, linked evidence, assignments, and status changes together.
 - Shows whether a connected system is sending activity or needs attention.
 - Provides administrator, investigator, and read-only access.
+- Includes a keyboard page picker, chart time windows, and connection filters.
 
 ## Get it running
 
@@ -56,6 +57,10 @@ Follow the [monitoring guide](docs/monitoring.md) before switching to live colle
 The assistant can explain the evidence already linked to an alert or investigation. It runs when you choose **Explain**; it does not run on every log record. Detection still uses rules, and the assistant cannot block addresses, execute commands, or change a monitored system.
 
 See [assistant setup and data handling](docs/local-ai.md) for the local option and optional external providers. Read the privacy notes before enabling an external service.
+
+### Finding your way around
+
+Use **Go to** or **Ctrl/⌘ + K** to open a page by name. The overview chart switches between 6, 12, and 24 hours, and Connected systems lets you search connections or show only the ones needing attention. These controls change the view, not your data or collection settings.
 
 ## Built with
 

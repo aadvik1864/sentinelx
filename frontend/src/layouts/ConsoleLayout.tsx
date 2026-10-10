@@ -1,28 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Activity, Bell, Boxes, ChevronDown, CircleHelp, FileText, LayoutDashboard,
-  LogOut, Menu, Radio, Search, Settings, Shield, SlidersHorizontal, Sparkles, X,
+  ChevronDown, CircleHelp, Command, LogOut, Menu, Search, Settings, X,
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Brand, Modal, ErrorBox } from "../components/ui";
+import { QuickNavigation } from "../components/QuickNavigation";
 import { useAuth } from "../store/AuthContext";
 import { useLive } from "../store/LiveContext";
 import { useResource } from "../hooks/useResource";
 import { errorMessage } from "../services/api";
 import { roleLabels } from "../utils/labels";
+import { navigation } from "../utils/navigation";
 import type { SystemInfo } from "../types";
-
-const navigation = [
-  { path: "/dashboard", label: "Overview", icon: LayoutDashboard, viewer: true },
-  { path: "/alerts", label: "Alerts", icon: Bell, viewer: true },
-  { path: "/incidents", label: "Investigations", icon: FileText, viewer: true },
-  { path: "/events", label: "Activity", icon: Activity },
-  { path: "/sources", label: "Connected systems", icon: Radio },
-  { path: "/ai-assistant", label: "Assistant", icon: Sparkles },
-  { path: "/assets", label: "Device list", icon: Boxes, advanced: true },
-  { path: "/rules", label: "Alert rules", icon: SlidersHorizontal, advanced: true },
-  { path: "/threat-intelligence", label: "Address checks", icon: Shield, advanced: true },
-];
 
 export function ConsoleLayout() {
   const { user, logout } = useAuth();
@@ -31,11 +20,24 @@ export function ConsoleLayout() {
   const location = useLocation();
   const [menu, setMenu] = useState(false);
   const [help, setHelp] = useState(false);
+  const [quick, setQuick] = useState(false);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { data: system } = useResource<SystemInfo>("/system");
   const active = navigation.find((item) => location.pathname.startsWith(item.path));
   const canInvestigate = user?.role !== "VIEWER";
+  const availablePages = navigation.filter((item) => canInvestigate || item.viewer);
+
+  useEffect(() => {
+    function shortcut(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== "k" || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (document.querySelector('[role="dialog"]') && !quick) return;
+      event.preventDefault();
+      setQuick((open) => !open);
+    }
+    document.addEventListener("keydown", shortcut);
+    return () => document.removeEventListener("keydown", shortcut);
+  }, [quick]);
 
   async function signOut() {
     try {
@@ -95,6 +97,15 @@ export function ConsoleLayout() {
             )}
           </div>
           <div className="topbar-actions">
+            <button
+              className="quick-navigation-trigger"
+              aria-label="Go to a page"
+              aria-keyshortcuts="Control+k Meta+k"
+              title="Go to a page (Ctrl or ⌘ + K)"
+              onClick={() => { setQuick(true); setMenu(false); }}
+            >
+              <Command size={17} /><span>Go to</span><kbd>K</kbd>
+            </button>
             {canInvestigate && (
               <form className="global-search" onSubmit={(event) => {
                 event.preventDefault();
@@ -109,7 +120,9 @@ export function ConsoleLayout() {
               className={`connection-chip ${live ? "connected" : ""}`}
               title="This is the dashboard connection, not the status of your monitored systems. If live updates disconnect, this page refreshes every 30 seconds. Check Connected systems for collection status."
             >
-              <span className="status-light" />{live ? "Live updates" : "Auto refresh"}
+              <span className="status-light" />
+              <span className="connection-label">{live ? "Live updates" : "Auto refresh"}</span>
+              <span className="connection-short" aria-hidden="true">{live ? "Live" : "Refresh"}</span>
             </span>
             <button className="icon-button" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={19} /></button>
           </div>
@@ -138,6 +151,12 @@ export function ConsoleLayout() {
             <p>The advanced tools are for people who need raw records, custom alert rules, or address reputation checks. This is a local monitoring prototype, not a guarantee that a system is secure.</p>
           </div>
         </Modal>
+      )}
+      {quick && (
+        <QuickNavigation
+          items={[...availablePages, { path: "/settings", label: "Settings", icon: Settings, viewer: true }]}
+          onClose={() => setQuick(false)}
+        />
       )}
     </div>
   );

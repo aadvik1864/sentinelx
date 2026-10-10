@@ -38,7 +38,7 @@ export default function EvidenceGraph({ incident }: { incident: Incident }) {
     id: `${ids[index]}-${id}`,
     source: ids[index],
     target: id,
-    style: { stroke: "#607d9f" },
+    style: { stroke: "var(--accent-border)" },
   }));
   return (
     <div className="evidence-graph">
@@ -52,7 +52,7 @@ export default function EvidenceGraph({ incident }: { incident: Incident }) {
         nodesConnectable={false}
         colorMode="dark"
       >
-        <Background color="#354763" gap={24} />
+        <Background color="var(--line)" gap={24} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
