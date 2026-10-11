@@ -25,6 +25,10 @@ def main():
     )
     if credentials.get("SENTINELX_E2E_URL") != "https://localhost:18443":
         parser.error("Only the disposable fixture origin is allowed")
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        # GitHub handles these workflow commands as secret masks, not public log content.
+        for name in ("SENTINELX_E2E_PASSWORD", "SENTINELX_E2E_OTP"):
+            print(f"::add-mask::{credentials[name]}", flush=True)
     home = Path(tempfile.mkdtemp(prefix="browser-home-", dir=args.artifact_dir))
     nss = home / ".pki" / "nssdb"
     nss.mkdir(parents=True)

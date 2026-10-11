@@ -69,12 +69,11 @@ jobs:
         working-directory: frontend
         run: |
           export SENTINELX_E2E_PASSWORD=$(sed -n 's/^BOOTSTRAP_ADMIN_PASSWORD=//p' ../.env)
+          echo "::add-mask::$SENTINELX_E2E_PASSWORD"
           npm run test:e2e
       - if: failure()
-        run: docker compose logs --no-color
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with: {name: browser-failures, path: frontend/test-results}
+        run: docker compose ps --all
+      # Never upload browser traces/videos/captures, which can contain fixture credentials.
       - if: always()
         run: docker compose down
 

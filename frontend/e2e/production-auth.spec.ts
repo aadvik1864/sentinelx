@@ -16,6 +16,7 @@ test("production sign-in and first-login security gates", async ({ page, browser
   const signedIn = page.waitForResponse((response) => response.url().endsWith("/api/v1/auth/login") && response.status() === 200);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   const session = await (await signedIn).json();
+  if (process.env.GITHUB_ACTIONS === "true") console.log(`::add-mask::${session.access_token}`);
   await expect(page.getByRole("heading", { name: "Your security overview" })).toBeVisible();
   const refreshCookie = (await page.context().cookies()).find((cookie) => cookie.name === "sentinelx_refresh");
   expect(refreshCookie?.secure).toBe(true);
