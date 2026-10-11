@@ -3,6 +3,7 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlsplit
 
+from cryptography.fernet import Fernet
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,8 +15,14 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./sentinelx.db"
     redis_url: str = ""
     jwt_secret: str = ""
-    access_token_minutes: int = 15
-    refresh_token_days: int = 7
+    access_token_minutes: int = Field(default=15, ge=1, le=15)
+    refresh_token_days: int = Field(default=7, ge=1, le=7)
+    mfa_encryption_key: str = ""
+
+    @property
+    def require_mfa(self) -> bool:
+        return self.environment == "production"
+
     cookie_secure: bool = False
     api_docs_enabled: bool = False
     allowed_origins: str = "http://localhost:5173,http://localhost:8080"
@@ -50,6 +57,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def check_security(self):
+        if self.mfa_encryption_key:
+            try:
+                Fernet(self.mfa_encryption_key.encode())
+            except (ValueError, TypeError):
+                raise ValueError("MFA_ENCRYPTION_KEY must be a Fernet key") from None
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("ENVIRONMENT must be development, test, or production")
         if self.live_monitoring and (self.demo_mode or self.seed_demo):
@@ -102,6 +114,8 @@ class Settings(BaseSettings):
                     raise ValueError(
                         "Production origins must be exact HTTPS origins with explicitly allowed hostnames"
                     )
+            if not self.mfa_encryption_key:
+                raise ValueError("Production requires MFA_ENCRYPTION_KEY for authenticator secrets")
         if not self.jwt_secret:
             # Ephemeral development secret: restarting intentionally invalidates existing access tokens.
             self.jwt_secret = secrets.token_urlsafe(48)

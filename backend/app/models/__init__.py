@@ -18,6 +18,13 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="VIEWER")
     auth_version: Mapped[int] = mapped_column(default=0)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_secret: Mapped[str | None] = mapped_column(Text)
+    mfa_pending_secret: Mapped[str | None] = mapped_column(Text)
+    mfa_pending_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    mfa_last_step: Mapped[int] = mapped_column(Integer, default=-1)
+    mfa_recovery_hashes: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -31,6 +38,7 @@ class RefreshSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     consumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    mfa_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Event(Base):
@@ -74,7 +82,8 @@ class SourceReceipt(Base):
     source_id: Mapped[int] = mapped_column(ForeignKey("log_sources.id"), primary_key=True)
     record_key: Mapped[str] = mapped_column(String(128), primary_key=True)
     payload_hash: Mapped[str] = mapped_column(String(64))
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), index=True)
+    # Stable acknowledgement ID, retained as a replay tombstone after raw-log retention.
+    event_id: Mapped[int] = mapped_column(Integer, index=True)
     incident_id: Mapped[int | None] = mapped_column(ForeignKey("incidents.id"))
 
 

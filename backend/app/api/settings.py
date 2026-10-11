@@ -1,17 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from app.api.common import page, require_row
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import admin_only, audit, current_user, rate_limit, write_security
-from app.models import AuditLog, User
-from app.schemas import Register, UserPatch
+from app.models import AuditLog, RefreshSession, User
+from app.schemas import Register, UserAccess, UserPatch
 from app.services.serialization import serialize
 from app.services.users import provision_viewer
 
 router = APIRouter(tags=["System"])
+
+
+def lock_administrator(db, user):
+    # Serialize cross-account changes across workers, then recheck the actor.
+    # Two administrators must not concurrently disable/demote one another into lockout.
+    if db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(7369746578)"))
+    db.refresh(user, with_for_update=True)
+    if user.disabled or user.role != "ADMIN":
+        raise HTTPException(403, "Administrator access is no longer active")
 
 
 @router.get("/system")
@@ -39,7 +49,9 @@ def assignees(user: User = Depends(write_security), db: Session = Depends(get_db
     return {
         "items": [
             {"id": row.id, "name": row.name}
-            for row in db.scalars(select(User).where(User.role.in_(["ADMIN", "ANALYST"])))
+            for row in db.scalars(
+                select(User).where(User.role.in_(["ADMIN", "ANALYST"]), User.disabled.is_(False))
+            )
         ]
     }
 
@@ -68,7 +80,9 @@ def update_user(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ):
+    lock_administrator(db, user)
     row = require_row(db, User, user_id)
+    db.refresh(row, with_for_update=True)
     if row.id == user.id:
         raise HTTPException(409, "Administrators cannot change their own role")
     previous = row.role
@@ -83,6 +97,27 @@ def update_user(
         request,
         {"before": previous, "after": data.role},
     )
+    db.commit()
+    return serialize(row)
+
+
+@router.patch("/users/{user_id}/access")
+def update_access(
+    user_id: int,
+    data: UserAccess,
+    request: Request,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+):
+    lock_administrator(db, user)
+    row = require_row(db, User, user_id)
+    db.refresh(row, with_for_update=True)
+    if row.id == user.id:
+        raise HTTPException(409, "Administrators cannot disable their own account")
+    row.disabled = data.disabled
+    row.auth_version += 1
+    db.execute(update(RefreshSession).where(RefreshSession.user_id == row.id).values(revoked=True))
+    audit(db, user, "UPDATE_USER_ACCESS", "user", row.id, request, {"disabled": row.disabled})
     db.commit()
     return serialize(row)
 

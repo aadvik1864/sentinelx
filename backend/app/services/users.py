@@ -15,6 +15,7 @@ def provision_viewer(db: Session, data: Register, administrator: User, request: 
         email=str(data.email).lower(),
         password_hash=hash_password(data.password),
         role="VIEWER",
+        must_change_password=True,
     )
     db.add(user)
     try:

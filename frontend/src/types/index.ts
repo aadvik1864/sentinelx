@@ -5,6 +5,10 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  must_change_password?: boolean;
+  mfa_enabled?: boolean;
+  mfa_required?: boolean;
+  disabled?: boolean;
   created_at: string;
 }
 export interface Session {

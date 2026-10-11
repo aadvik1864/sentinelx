@@ -119,10 +119,9 @@ def ingest(
             if receipt:
                 if receipt.payload_hash != payload_hash:
                     raise ValueError("Record key was reused with different content")
-                existing = db.get(Event, receipt.event_id)
                 db.commit()
                 return {
-                    "event": serialize(existing),
+                    "event": {"id": receipt.event_id},
                     "alerts": [],
                     "incident_id": receipt.incident_id,
                     "duplicate": True,

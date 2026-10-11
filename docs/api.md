@@ -14,8 +14,12 @@ Interactive OpenAPI docs are disabled by default. Development-only opt-in: `API_
 | POST | `/auth/logout` | Revokes cookie session family |
 | GET | `/auth/me` | Authenticated |
 | POST | `/auth/change-password` | Authenticated, current password required |
+| POST | `/auth/mfa/setup` | Authenticated, `{ password }`; 10-minute enrollment key/URI |
+| POST | `/auth/mfa/enable` | Authenticated, `{ code }`; enables TOTP, returns recovery codes once, revokes sessions |
 
-Login accepts `{ "email": "…", "password": "…" }` and returns `{ "access_token": "…", "token_type": "bearer", "user": { … } }`. Access tokens belong in `Authorization: Bearer …`, not local storage or URLs. The browser keeps them in memory. Refresh cookies use the `/api/v1/auth` path, SameSite Strict, and HTTP-only; Secure is mandatory in production. Cookie-backed mutations require an approved `Origin` header.
+Login accepts `{ "email": "…", "password": "…", "otp": "…" }`; `otp` is optional for an unenrolled account and required for enrolled accounts (TOTP or single-use recovery code). It returns `{ "access_token": "…", "token_type": "bearer", "user": { … } }`, with `must_change_password`, `mfa_enabled`, and `mfa_required` flags. New accounts must change starter passwords; production requires MFA enrollment. Setup-only sessions cannot access workspace REST endpoints or sockets. Password changes and MFA enablement revoke prior sessions; sign in again with a fresh TOTP step or recovery code. Enrollment/recovery credentials are never included in subsequent user reads or audit metadata.
+
+Access tokens belong in `Authorization: Bearer …`, not local storage or URLs. The browser keeps them in memory. Refresh cookies use the `/api/v1/auth` path, SameSite Strict, and HTTP-only; Secure is mandatory in production. Cookie-backed mutations require an approved `Origin` header.
 
 ## Permissions
 
@@ -26,7 +30,7 @@ Login accepts `{ "email": "…", "password": "…" }` and returns `{ "access_tok
 | Assets, rules | None | Read | Create/edit (delete rules) |
 | Log sources | None | Status/setup read | Create, pause/resume, replace key |
 | Intelligence, assistant | None | Use | Use |
-| Users, audit trail | None | Assignee names only | Create accounts / manage roles / read audit |
+| Users, audit trail | None | Active assignee names only | Create accounts / manage roles and access / read audit |
 | Isolated simulator | None | None | Development + explicit demo flag only |
 
 There is no organization boundary in this single-workspace MVP. There is no anonymous sign-up. Administrators admit trusted people; intentionally admitted Viewers can read shared alert evidence and investigation notes.
@@ -68,7 +72,7 @@ Field search accepts `source_ip:203.0.113.42 severity:medium`, quoted strings, a
 
 Creating/replacing a key returns `{ source, collector_key }` once. Only its SHA-256 digest is stored; read responses/audit metadata never return the key or digest. Keys authorize ingestion/health **only for their source**, not dashboard access, raw-event reads, or source management. They have no automatic expiry; pause or replace them to revoke use. Keep private configuration files at 0600.
 
-Supported kinds: `linux`, `nginx`, `apache`, `application`. The registered kind/hostname are authoritative; collectors cannot override them in a record. `record_key` is source-scoped, 16–128 safe identifier characters. Accepted retries return `{ event_id, duplicate: true }` without a second event/detection. Different content under the same key returns 409. Linux collection requires an explicit occurrence timestamp; JSON records require a timestamp in the envelope or record. Common/combined web logs supply their own occurrence time. Timestamp validation does not silently use receipt time for missing collector timestamps.
+Supported kinds: `linux`, `nginx`, `apache`, `application`. The registered kind/hostname are authoritative; collectors cannot override them in a record. `record_key` is source-scoped, 16–128 safe identifier characters. Accepted retries return `{ event_id, duplicate: true }` without a second event/detection, including after approved raw-event retention: receipt tombstones preserve the original acknowledgement ID, which need not still resolve to retained raw data. Different content under the same key returns 409. Linux collection requires an explicit occurrence timestamp; JSON records require a timestamp in the envelope or record. Common/combined web logs supply their own occurrence time. Timestamp validation does not silently use receipt time for missing collector timestamps.
 
 Heartbeat error codes are allowlisted rather than arbitrary collector exception strings. Paused sources return 403. Status becomes offline after 90 seconds without a heartbeat; waiting is not the same as offline. These endpoints never open the configured `log_path` on the backend. See [monitoring setup](monitoring.md) and [delivery limits](collectors.md).
 
@@ -98,7 +102,8 @@ Resolving an incident closes its related alerts except false positives. It never
 - `GET /threat-intelligence/ip/{ip}`, `/domain/{domain}`, `/hash/{hash}`. Provider context is cached in IOC records; lookups are audit logged.
 - `POST /ai/analyze-incident`: `{ "incident_id": 1 }`.
 - `POST /ai/explain-alert`: `{ "alert_id": 1 }`.
-- `GET /users`, `POST /users`, `PATCH /users/{id}` (ADMIN only). Creation accepts `{ "name": "…", "email": "…", "password": "…" }` and always creates a VIEWER; role fields are rejected. Names are trimmed; passwords must be 12–128 characters. Duplicate emails return 409. Creation audits the administrator and role, never the password. No invitation email is sent and starter-password change is recommended, not enforced. PATCH accepts `{ "role": "ANALYST" }`; self-demotion is disallowed.
+- `GET /users`, `POST /users`, `PATCH /users/{id}` (ADMIN only). Creation accepts `{ "name": "…", "email": "…", "password": "…" }` and always creates a VIEWER; role fields are rejected. Names are trimmed; passwords must be 12–128 characters. Duplicate emails return 409. Creation audits the administrator and role, never the password. No invitation email is sent; starter-password replacement is enforced before workspace access. Role PATCH accepts `{ "role": "ANALYST" }`; self-demotion is disallowed.
+- `PATCH /users/{id}/access` (ADMIN): `{ "disabled": true }`. Disabling rejects login/refresh/REST and revokes sessions; sockets revalidate on each update/heartbeat. Re-enabling never restores old sessions. Self-disabling is disallowed. PostgreSQL serializes cross-account administration and rechecks the actor to prevent concurrent cross-disable/demotion lockout.
 - `GET /users/assignees`, `GET /audit-logs`, `GET /system`, `GET /dashboard`.
 - `POST /demo/simulate`: development-only synthetic sequence.
 

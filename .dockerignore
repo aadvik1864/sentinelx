@@ -3,11 +3,16 @@
 .env.*
 .venv
 .state
+.release
 **/*.sqlite3
 **/*.sqlite3-shm
 **/*.sqlite3-wal
 **/*.pem
 **/*.key
+**/*.age
+**/*.agekey
+**/*.dump
+**/*.backup.sql
 docs/security-review.md
 docs/demo.webm
 docs/screenshots

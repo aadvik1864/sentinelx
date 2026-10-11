@@ -20,6 +20,7 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [backgroundPaused, setBackgroundPaused] = useState(false);
@@ -30,7 +31,8 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      await login(email, password);
+      if (otp) await login(email, password, otp);
+      else await login(email, password);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -136,6 +138,17 @@ export function LoginPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
+              />
+            </label>
+            <label>
+              Authenticator or recovery code
+              <input
+                type="text"
+                autoComplete="one-time-code"
+                placeholder="If two-step sign-in is enabled"
+                value={otp}
+                maxLength={64}
+                onChange={(event) => setOtp(event.target.value.trim())}
               />
             </label>
             <button className="button primary login-submit" disabled={busy}>

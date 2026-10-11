@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { Empty, Loading } from "./components/ui";
+import { AccountSecuritySetup } from "./components/AccountSecurity";
 import { ConsoleLayout } from "./layouts/ConsoleLayout";
 import { AlertsPage } from "./pages/Alerts";
 import { AssetsPage } from "./pages/Assets";
@@ -24,6 +25,8 @@ function Protected() {
       </div>
     );
   if (!user) return <Navigate to="/login" replace />;
+  if (user.must_change_password || (user.mfa_required && !user.mfa_enabled))
+    return <AccountSecuritySetup />;
   return (
     <LiveProvider>
       <Outlet />

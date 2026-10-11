@@ -12,7 +12,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, otp?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 const AuthContext = createContext<AuthState | null>(null);
@@ -37,10 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     return () => window.clearInterval(timer);
   }, [session]);
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, otp?: string) {
     const { data } = await api.post<Session>("/auth/login", {
       email,
       password,
+      ...(otp ? { otp } : {}),
     });
     applySession(data);
   }

@@ -57,7 +57,9 @@ def test_admin_created_person_is_audited_without_password_and_can_sign_in(client
     assert created.json()["role"] == "VIEWER"
     assert created.json()["name"] == "Trusted person"
     assert created.json()["email"] == "trusted@example.com"
-    assert "password" not in created.text
+    assert "password_hash" not in created.json()
+    assert payload["password"] not in created.text
+    assert created.json()["must_change_password"]
     row = db.get(User, created.json()["id"])
     assert row.password_hash.startswith("$argon2id$")
     entry = db.query(AuditLog).filter(AuditLog.action == "CREATE_USER").one()
@@ -109,6 +111,8 @@ def production_settings(**changes):
             "environment": "production",
             "jwt_secret": "test-only-secret-with-at-least-32-characters",
             "cookie_secure": True,
+            # Deterministic test-only Fernet key, never used for deployment.
+            "mfa_encryption_key": "dGVzdC1vbmx5LW1mYS1lbmNyeXB0aW9uLWtleS0xMjM=",  # gitleaks:allow
             "database_url": "postgresql+psycopg://localhost/disposable_test",
             "redis_url": "redis://localhost:6379/0",
             "allowed_hosts": "sentinelx.example,localhost,127.0.0.1",

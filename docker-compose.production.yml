@@ -1,0 +1,49 @@
+# Prepared single-team release. Requires the base and HTTPS files, private .env,
+# operator-owned TLS, backup storage, and the deployment checklist.
+services:
+  backend:
+    environment:
+      ENVIRONMENT: production
+      COOKIE_SECURE: "true"
+      API_DOCS_ENABLED: "false"
+      DEMO_MODE: "false"
+      SEED_DEMO: "false"
+      LIVE_MONITORING: "true"
+      LLM_PROVIDER: ${LLM_PROVIDER:-offline}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Generate and privately back up the MFA encryption key}
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    init: true
+    stop_grace_period: 45s
+  postgres:
+    image: ${COMPOSE_PROJECT_NAME:-sentinelx}-postgres-production
+    build: {context: ., dockerfile: docker/postgres/Dockerfile}
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 256
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  redis:
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy noeviction']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  frontend:
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  nginx:
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 128

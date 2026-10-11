@@ -39,7 +39,9 @@ def token_digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def issue_session(db: Session, user: User, family: str | None = None):
+def issue_session(
+    db: Session, user: User, family: str | None = None, *, mfa_verified: bool = False
+):
     refresh = secrets.token_urlsafe(48)
     session = RefreshSession(
         id=str(uuid4()),
@@ -47,6 +49,7 @@ def issue_session(db: Session, user: User, family: str | None = None):
         family=family or str(uuid4()),
         token_hash=token_digest(refresh),
         expires_at=utcnow() + timedelta(days=settings.refresh_token_days),
+        mfa_verified=mfa_verified,
     )
     db.add(session)
     db.flush()
@@ -68,7 +71,7 @@ def issue_session(db: Session, user: User, family: str | None = None):
     return access, refresh
 
 
-def authenticate_token(token: str, db: Session) -> User:
+def authenticate_token(token: str, db: Session, *, allow_setup: bool = False) -> User:
     try:
         payload = jwt.decode(
             token,
@@ -82,6 +85,7 @@ def authenticate_token(token: str, db: Session) -> User:
         session = db.get(RefreshSession, payload["sid"])
         if (
             not user
+            or user.disabled
             or not session
             or session.user_id != user.id
             or session.revoked
@@ -89,9 +93,26 @@ def authenticate_token(token: str, db: Session) -> User:
             or payload["ver"] != user.auth_version
         ):
             raise ValueError("Invalid session")
+        if not allow_setup and (
+            user.must_change_password
+            or (settings.require_mfa and not user.mfa_secret)
+            or (user.mfa_secret and not session.mfa_verified)
+        ):
+            raise HTTPException(
+                403, "Complete account security setup before accessing the workspace"
+            )
         return user
     except (jwt.InvalidTokenError, ValueError, TypeError):
         raise HTTPException(401, "Session expired. Please sign in again.") from None
+
+
+def authenticated_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    if not credentials:
+        raise HTTPException(401, "Authentication required")
+    return authenticate_token(credentials.credentials, db, allow_setup=True)
 
 
 def current_user(

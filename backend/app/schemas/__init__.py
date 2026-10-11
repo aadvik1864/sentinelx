@@ -37,6 +37,15 @@ class Register(StrictModel):
 class Login(StrictModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    otp: str = Field(default="", max_length=64)
+
+
+class MFASetup(StrictModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+class MFAEnable(StrictModel):
+    code: str = Field(pattern=r"^\d{6}$")
 
 
 class ChangePassword(StrictModel):
@@ -208,6 +217,10 @@ class AssetInput(StrictModel):
 
 class UserPatch(StrictModel):
     role: Role
+
+
+class UserAccess(StrictModel):
+    disabled: bool
 
 
 class AnalyzeIncident(StrictModel):

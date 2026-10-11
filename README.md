@@ -1,31 +1,14 @@
 # SentinelX
 
-SentinelX collects Linux, web server, and application logs, checks detection rules, and groups alerts into investigations.
+SentinelX is a security monitoring prototype with a web dashboard for reviewing activity from connected Linux machines, web servers, and applications. It brings logs, alerts, and investigations into one shared workspace.
 
-## Quick start
+## Features
 
-Requires Python 3, Docker, and Docker Compose.
-
-```bash
-git clone https://github.com/aadvik1864/sentinelx.git
-cd sentinelx
-python3 scripts/init_env.py
-docker compose up --build --wait
-```
-
-Open **http://localhost:8080** and sign in with:
-
-- **Email:** `admin@sentinelx.dev`
-- **Password:** `BOOTSTRAP_ADMIN_PASSWORD` from the generated `.env` file
-
-Keep `.env` and collected logs private. The default setup uses practice data; follow the monitoring guide before connecting real systems.
-
-This is an educational prototype, not a production security platform. Keep it local and review the deployment and security guides before remote access.
-
-## Documentation
-
-[Monitoring](docs/monitoring.md) · [Deployment](docs/deployment.md) · [Security](docs/security.md) · [Assistant](docs/local-ai.md)
-
-## License
-
-SentinelX code: [MIT](LICENSE). React Bits adaptations: [MIT + Commons Clause](frontend/src/components/react-bits/LICENSE.md).
+- Live overview with activity totals, alert priorities, and 6/12/24-hour charts.
+- Searchable activity with time, system, and priority filters.
+- Rule-based alerts and customizable detection rules.
+- Investigations with timelines, linked evidence, relationship graphs, notes, and assignments.
+- Connection-health indicators and searchable connected-system lists.
+- Optional assistant that explains evidence and suggests investigation steps without executing actions.
+- Administrator, investigator, and read-only access, with two-step sign-in and account security setup.
+- Responsive graphite-and-copper interface with keyboard navigation and reduced-motion support.

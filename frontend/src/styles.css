@@ -38,6 +38,31 @@
   --low: #b9cbd2;
 }
 
+.account-security-screen {
+  width: min(100% - 32px, 560px);
+  margin: 48px auto;
+  display: grid;
+  gap: 24px;
+}
+.account-security-panel {
+  padding: 24px;
+}
+.account-security-panel h1 {
+  font-size: 1.6rem;
+  margin: 0 0 12px;
+}
+.enrollment-secret,
+.recovery-codes {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  background: var(--canvas);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  user-select: all;
+}
+
 * {
   box-sizing: border-box;
 }

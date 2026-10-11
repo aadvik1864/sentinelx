@@ -1,6 +1,7 @@
 """Generate development secrets without overwriting an existing .env."""
 
 import os
+import base64
 import secrets
 from pathlib import Path
 
@@ -9,6 +10,7 @@ path = root / ".env"
 template = (root / ".env.example").read_text()
 values = {
     "JWT_SECRET": secrets.token_urlsafe(48),
+    "MFA_ENCRYPTION_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
     "POSTGRES_PASSWORD": secrets.token_urlsafe(24),
     "REDIS_PASSWORD": secrets.token_urlsafe(24),
     "BOOTSTRAP_ADMIN_PASSWORD": secrets.token_urlsafe(18),

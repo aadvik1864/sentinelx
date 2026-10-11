@@ -30,6 +30,7 @@ def bootstrap(db):
                 email=settings.bootstrap_admin_email.lower(),
                 password_hash=hash_password(settings.bootstrap_admin_password),
                 role="ADMIN",
+                must_change_password=settings.environment == "production",
             )
         )
     # A persistent marker prevents an intentionally deleted rule from reappearing on restart.

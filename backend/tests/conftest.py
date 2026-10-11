@@ -14,6 +14,7 @@ os.environ["DATABASE_URL"] = (
     os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{test_directory.name}/tests.db"
 )
 os.environ["JWT_SECRET"] = "test-only-secret-with-at-least-32-characters"
+os.environ["MFA_ENCRYPTION_KEY"] = "dGVzdC1vbmx5LW1mYS1lbmNyeXB0aW9uLWtleS0xMjM="
 os.environ["BOOTSTRAP_ADMIN_EMAIL"] = "admin@sentinelx.dev"
 os.environ["BOOTSTRAP_ADMIN_PASSWORD"] = "Test-password-123!"
 os.environ["REDIS_URL"] = ""
@@ -26,6 +27,7 @@ os.environ["ABUSEIPDB_API_KEY"] = ""
 os.environ["COOKIE_SECURE"] = "false"
 os.environ["API_DOCS_ENABLED"] = "false"
 os.environ["ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver"
+os.environ["ALLOWED_ORIGINS"] = "http://localhost:5173,http://localhost:8080"
 
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
 from app.core.security import hash_password, limiter  # noqa: E402

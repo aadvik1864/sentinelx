@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AuthenticatorSetup } from "../components/AccountSecurity";
 import { KeyRound, LockKeyhole, Settings, UserPlus, Users } from "lucide-react";
 import {
   Badge,
@@ -96,8 +97,8 @@ function AddPerson({ close, added }: { close: () => void; added: () => void }) {
           />
         </label>
         <p className="muted">
-          Share the starter password privately, not in investigation notes. Ask
-          this person to change it in Settings after signing in. No email or invitation is sent.
+          Verify the recipient and share the starter password privately, not in investigation notes.
+          They must replace it before viewing the workspace. No email or invitation is sent.
         </p>
         <label className="checkbox-label">
           <input
@@ -165,6 +166,19 @@ export function SettingsPage() {
       reloadUsers();
       reconcile();
       notify("Access updated. The user’s previous sign-in permissions no longer apply.");
+    } catch (err) {
+      notify(errorMessage(err), true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function setAccess(row: User) {
+    setBusy(true);
+    try {
+      await api.patch(`/users/${row.id}/access`, { disabled: !row.disabled });
+      reloadUsers();
+      reconcile();
+      notify(row.disabled ? "Account enabled. Previous sessions remain revoked." : "Account disabled. All sessions have been revoked.");
     } catch (err) {
       notify(errorMessage(err), true);
     } finally {
@@ -264,6 +278,9 @@ export function SettingsPage() {
             </div>
           </form>
         </section>
+        <section className="panel settings-panel">
+          {user?.mfa_enabled ? <><h2>Two-step sign-in</h2><p>Your authenticator is enabled. Keep your single-use recovery codes in your password manager.</p></> : <AuthenticatorSetup />}
+        </section>
       </div>
       {admin && (
         <>
@@ -288,6 +305,7 @@ export function SettingsPage() {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Registered</th>
+                    <th>Access</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -314,7 +332,8 @@ export function SettingsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="muted">{time(row.created_at, true)}</td>
+                       <td className="muted">{time(row.created_at, true)}</td>
+                       <td><button className="button secondary" disabled={busy || row.id === user?.id} onClick={() => setAccess(row)}>{row.disabled ? "Enable account" : "Disable account"}</button></td>
                     </tr>
                   ))}
                 </tbody>

@@ -8,6 +8,7 @@ services:
       API_DOCS_ENABLED: "false"
       DEMO_MODE: "false"
       SEED_DEMO: "false"
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Generate and privately back up the MFA encryption key}
       ALLOWED_ORIGINS: ${HTTPS_ORIGIN:?Set the exact trusted HTTPS origin}
       ALLOWED_HOSTS: ${HTTPS_HOST:?Set its hostname},localhost,127.0.0.1
   nginx:

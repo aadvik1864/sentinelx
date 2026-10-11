@@ -1,0 +1,9 @@
+# Disposable release validation only. Never use this file with the live project.
+services:
+  backend:
+    env_file: !override
+      - ${RELEASE_ENV_FILE:?Only the disposable release-check environment is permitted}
+  nginx:
+    ports: !override
+      - "127.0.0.1:18080:8080"
+      - "127.0.0.1:18443:8443"

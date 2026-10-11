@@ -31,7 +31,8 @@ jobs:
       - run: pip install -r backend/requirements.txt pip-audit
       - run: ruff check backend collectors scripts
       - run: ruff format --check backend collectors scripts
-      - run: pytest -q
+      - run: pytest -q scripts/tests
+      - run: python ../scripts/check_runner_clock.py -- pytest -q
         working-directory: backend
         env:
           TEST_DATABASE_URL: ${{ matrix.url }}
@@ -76,3 +77,55 @@ jobs:
         with: {name: browser-failures, path: frontend/test-results}
       - if: always()
         run: docker compose down
+
+  production-release:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: pip install -r backend/requirements.txt
+      - run: sudo apt-get update && sudo apt-get install -y age libnss3-tools
+      - name: Install checksum-verified Trivy
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tar.gz" https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz
+          echo "c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f  $RUNNER_TEMP/trivy.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: One-day history, ten-minute 10 EPS soak, TLS, identity, failure, and restore gates
+        run: python scripts/check_runner_clock.py -- python scripts/release_check.py --seconds 600 --history-events 864000 --keep
+      - name: Container OS and language vulnerability gates
+        run: |
+          directory=$(find /tmp/opencode -maxdepth 1 -type d -name 'sentinelx-release-*' | head -n 1)
+          python scripts/scan_release.py --artifact-dir "$directory"
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Trusted-CA production browser gate
+        run: |
+          directory=$(find /tmp/opencode -maxdepth 1 -type d -name 'sentinelx-release-*' | head -n 1)
+          python scripts/browser_release_check.py --artifact-dir "$directory"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-fixture-reports
+          path: |
+            /tmp/opencode/sentinelx-release-*/report.json
+            /tmp/opencode/sentinelx-release-*/container-scan-summary.json
+      - name: Stop only the disposable release project
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, pathlib, subprocess
+          for report in pathlib.Path('/tmp/opencode').glob('sentinelx-release-*/report.json'):
+              project = json.loads(report.read_text())['project']
+              if not project.startswith('sentinelx-release-'):
+                  raise RuntimeError('Refusing non-disposable project')
+              command = ['docker','compose','--project-name',project,'--env-file',str(report.parent/'.env')]
+              for file in ('docker-compose.yml','docker-compose.https.yml','docker-compose.production.yml','docker-compose.release-test.yml'):
+                  command += ['-f',file]
+              subprocess.run(command + ['down'],check=True)
+          PY
