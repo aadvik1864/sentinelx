@@ -71,7 +71,19 @@ Failed results must remain part of the review even if later sequential trials pa
 
 [GitHub run 38164648843](https://github.com/aadvik1864/sentinelx/actions/runs/38164648843) checked candidate `d58da2432b251e663a131fb644e600d3ba7e91c3`: SQLite passed 136 tests with seven PostgreSQL-only skips; PostgreSQL passed 143 tests, and the 20 release-tool tests passed in both jobs. Both monitored clocks were stable; the frontend and development browser workflow also passed.
 
-The one-day/ten-minute fixture acknowledged all 6,000 new records at 10.001 EPS, ingestion p95 0.0362 seconds and maximum 0.7881 seconds. Dashboard p95 was **1.3646 seconds**, exceeding the unchanged 1-second acceptance gate; therefore that run failed before recovery, scanning and production-browser follow-ups. The PostgreSQL dashboard query now combines daily totals, hourly buckets and address/type groups in one history scan, with database-side top-five ranking so high-cardinality groups do not become unbounded application-memory results. The candidate must pass the same capacity gate after this change before publication to `main`.
+The one-day/ten-minute fixture acknowledged all 6,000 new records at 10.001 EPS, ingestion p95 0.0362 seconds and maximum 0.7881 seconds. Dashboard p95 was **1.3646 seconds**, exceeding the unchanged 1-second acceptance gate; therefore that run failed before recovery, scanning and production-browser follow-ups. The PostgreSQL dashboard query now combines daily totals, hourly buckets and address/type groups in one history scan, with database-side top-five ranking so high-cardinality groups do not become unbounded application-memory results. This failure required the candidate to pass the same capacity gate after the change before publication to `main`; the following run supplies that evidence.
+
+### Validated application candidate (2026-10-12)
+
+[GitHub run 38216872283](https://github.com/aadvik1864/sentinelx/actions/runs/38216872283) passed every job for application commit `94af0ffdb29f49a43a0458d7473b325134dcd513`:
+
+- SQLite: **139 passed, eight PostgreSQL-only skips**; PostgreSQL: **147 passed**. Release-tool tests: **20 passed** in each database job. All observed runner clocks were stable.
+- Frontend: **45 unit tests passed**, lint/build and dependency audits passed; development and trusted-CA production browser workflows passed.
+- One-day synthetic history: **864,000 preloaded records**, followed by **6,000 acknowledged API records over 600 seconds** at **10.001 EPS**, with 120 concurrent dashboard reads. Ingestion p95/max: **0.0493/0.3340 seconds**. Dashboard p95/max: **0.5722/0.6299 seconds**. The original latency gates were not relaxed.
+- PostgreSQL restart, Redis failure/retry, encrypted restoration of **870,001 events and receipts**, SHA-256 content comparisons across 14 tables, corrupt-archive rejection and existing-database refusal passed.
+- The five exact runtime images in that run's `report.json` matched `container-scan-summary.json`, with **zero reported HIGH/CRITICAL findings**. Optional model inference is outside this profile.
+
+These results clear the tested application-candidate gates, not deployment approval, an untested retained-data footprint, or independent security review. The earlier failures remain documented; the [operator acceptance record](operator-acceptance.md) stays NO-GO until its applicable controls and review are signed off. Only the two fixture-report JSON files are public CI artifacts; credentials, keys, archives and browser captures are not uploaded.
 
 ## Backups and recovery
 
