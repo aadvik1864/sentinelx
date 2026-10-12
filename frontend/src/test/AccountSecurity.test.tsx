@@ -4,12 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import App from "../App";
 import { AccountSecuritySetup, AuthenticatorSetup } from "../components/AccountSecurity";
 
-const mocks = vi.hoisted(() => ({ post: vi.fn(), apply: vi.fn(), logout: vi.fn(), user: { must_change_password: true } }));
+const mocks = vi.hoisted(() => ({ post: vi.fn(), apply: vi.fn(), logout: vi.fn(), enroll: vi.fn(), user: { must_change_password: true } }));
 vi.mock("../services/api", () => ({ api: { post: mocks.post }, applySession: mocks.apply, errorMessage: () => "Request failed" }));
-vi.mock("../store/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, logout: mocks.logout }) }));
+vi.mock("../store/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, logout: mocks.logout, completeEnrollment: mocks.enroll }) }));
 
 describe("account security setup", () => {
-  beforeEach(() => { mocks.post.mockReset(); mocks.apply.mockReset(); });
+  beforeEach(() => { mocks.post.mockReset(); mocks.apply.mockReset(); mocks.enroll.mockReset(); });
   it("guards direct workspace URLs before mounting the console", () => {
     render(<MemoryRouter initialEntries={["/incidents/99"]}><App /></MemoryRouter>);
     expect(screen.getByText("Secure your account")).toBeVisible();
@@ -26,7 +26,7 @@ describe("account security setup", () => {
     await waitFor(() => expect(mocks.apply).toHaveBeenCalledWith(null));
     expect(mocks.post).toHaveBeenCalledWith("/auth/change-password", { current_password: "Starter-password-123!", new_password: "Own-password-456!" });
   });
-  it("confirms an authenticator and requires private recovery-code acknowledgement", async () => {
+  it("confirms an authenticator and moves its codes to the session-independent completion screen", async () => {
     mocks.post.mockResolvedValueOnce({ data: { secret: "TESTONLYSECRET" } }).mockResolvedValueOnce({ data: { recovery_codes: ["test-only-recovery-code"] } });
     render(<AuthenticatorSetup />);
     fireEvent.change(screen.getByLabelText("Current password"), { target: { value: "Own-password-456!" } });
@@ -34,12 +34,8 @@ describe("account security setup", () => {
     expect(await screen.findByText("TESTONLYSECRET")).toBeVisible();
     fireEvent.change(screen.getByLabelText("Six-digit code"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Enable two-step sign-in" }));
-    expect(await screen.findByText("test-only-recovery-code")).toBeVisible();
+    await waitFor(() => expect(mocks.enroll).toHaveBeenCalledWith("totp", ["test-only-recovery-code"]));
     expect(screen.queryByText("TESTONLYSECRET")).toBeNull();
-    expect(screen.getByRole("button", { name: "Continue to sign in" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to sign in" }));
-    expect(mocks.apply).toHaveBeenCalledWith(null);
   });
   it("does not bypass a failed enrollment", async () => {
     mocks.post.mockRejectedValue(new Error("Denied"));

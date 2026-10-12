@@ -3,16 +3,15 @@ import { startRegistration } from "@simplewebauthn/browser";
 import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/browser";
 import { api, applySession, errorMessage } from "../services/api";
 import { useResource } from "../hooks/useResource";
+import { useAuth } from "../store/AuthContext";
 import { ErrorBox, time } from "./ui";
 
 export function AddPasskey() {
+  const { completeEnrollment } = useAuth();
   const [password, setPassword] = useState("");
   const [name, setName] = useState("My passkey");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
-  const [codes, setCodes] = useState<string[]>([]);
-  const [saved, setSaved] = useState(false);
   async function add(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -23,23 +22,12 @@ export function AddPasskey() {
       setPassword("");
       const credential = await startRegistration({ optionsJSON: data.options });
       const response = await api.post<{ recovery_codes: string[] }>("/auth/passkeys/register/verify", { challenge_id: data.challenge_id, credential, name });
-      setCodes(response.data.recovery_codes);
-      setDone(true);
+      completeEnrollment("passkey", response.data.recovery_codes);
     } catch (err) {
       setPassword("");
       setError(errorMessage(err));
     } finally { setBusy(false); }
   }
-  if (done) return <div className="stack-form">
-    <h2>Passkey added</h2>
-    <p>Previous sessions were revoked. Sign in again with your password and passkey.</p>
-    {!!codes.length && <>
-      <p>Save these single-use recovery codes privately. They will not be shown again. Recovery codes are not phishing-resistant.</p>
-      <pre className="recovery-codes" aria-label="Recovery codes">{codes.join("\n")}</pre>
-      <label className="checkbox-label"><input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} />I saved my recovery codes privately.</label>
-    </>}
-    <button className="button primary" disabled={!!codes.length && !saved} onClick={() => applySession(null)}>Continue to sign in</button>
-  </div>;
   return <form className="stack-form" onSubmit={add}>
     <h2>Add a passkey</h2>
     <p>Use a security key or your device’s verified passkey. You still enter your password at sign-in. The browser requires your device PIN or biometric verification.</p>

@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { Empty, Loading } from "./components/ui";
-import { AccountSecuritySetup } from "./components/AccountSecurity";
+import { AccountSecuritySetup, SecurityEnrollmentComplete } from "./components/AccountSecurity";
 import { ConsoleLayout } from "./layouts/ConsoleLayout";
 import { LoginPage } from "./pages/Login";
 import { useAuth } from "./store/AuthContext";
@@ -45,6 +45,8 @@ function InvestigatorOnly() {
   );
 }
 export default function App() {
+  const { securityCompletion } = useAuth();
+  if (securityCompletion) return <SecurityEnrollmentComplete />;
   return (
     <Suspense fallback={<Loading label="Loading workspace page" />}>
       <Routes>

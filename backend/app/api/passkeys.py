@@ -40,6 +40,7 @@ from app.core.security import (
 from app.models import RefreshSession, User, WebAuthnChallenge, WebAuthnCredential, utcnow
 from app.schemas import Login, MFASetup, StrictModel
 from app.services.mfa import recovery_codes
+from app.services.telemetry import emit_activity
 
 router = APIRouter(prefix="/auth/passkeys", tags=["Account security"])
 settings = get_settings()
@@ -237,6 +238,9 @@ def registration_verify(
     db.execute(update(RefreshSession).where(RefreshSession.user_id == user.id).values(revoked=True))
     audit(db, user, "PASSKEY_ADDED", "user", user.id, request)
     db.commit()
+    emit_activity(
+        request, "account_security_changed", "User enrolled a passkey", username=user.email[:100]
+    )
     return {"recovery_codes": codes}
 
 
@@ -249,6 +253,13 @@ def login_options(data: Login, request: Request, db: Session = Depends(get_db)):
     if not user or user.disabled or not valid or not user.passkeys:
         audit(db, None, "LOGIN_FAILED", "auth", "passkey", request)
         db.commit()
+        emit_activity(
+            request,
+            "authentication_failure",
+            "Passkey sign-in rejected",
+            username=str(data.email).lower()[:100],
+            level="WARNING",
+        )
         raise HTTPException(401, "Incorrect sign-in details or no enrolled passkey")
     challenge = begin(db, user, "login", request)
     options = generate_authentication_options(
@@ -292,12 +303,25 @@ def login_verify(data: Finish, request: Request, response: Response, db: Session
     except (WebAuthnException, ValueError, TypeError, KeyError):
         audit(db, None, "LOGIN_FAILED", "auth", "passkey", request)
         db.commit()
+        emit_activity(
+            request,
+            "authentication_failure",
+            "Passkey verification rejected",
+            username=user.email[:100],
+            level="WARNING",
+        )
         raise HTTPException(401, "Passkey verification failed; start again") from None
     credential.sign_count, credential.last_used_at = result.new_sign_count, utcnow()
     access, refresh = issue_session(db, user, mfa_verified=True)
     audit(db, user, "LOGIN_PASSKEY", "user", user.id, request)
     db.commit()
     set_refresh(response, refresh)
+    emit_activity(
+        request,
+        "authentication_success",
+        "User signed in with a passkey",
+        username=user.email[:100],
+    )
     return {"access_token": access, "token_type": "bearer", "user": user_view(user)}
 
 
@@ -329,3 +353,6 @@ def remove_passkey(
     db.execute(update(RefreshSession).where(RefreshSession.user_id == user.id).values(revoked=True))
     audit(db, user, "PASSKEY_REMOVED", "user", user.id, request)
     db.commit()
+    emit_activity(
+        request, "account_security_changed", "User removed a passkey", username=user.email[:100]
+    )

@@ -5,11 +5,10 @@ import { Brand, ErrorBox } from "./ui";
 import { AddPasskey } from "./Passkeys";
 
 export function AuthenticatorSetup() {
+  const { completeEnrollment } = useAuth();
   const [password, setPassword] = useState("");
   const [secret, setSecret] = useState("");
   const [code, setCode] = useState("");
-  const [codes, setCodes] = useState<string[]>([]);
-  const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit(event: React.FormEvent) {
@@ -24,9 +23,9 @@ export function AuthenticatorSetup() {
         setPassword("");
       } else {
         const { data } = await api.post<{ recovery_codes: string[] }>("/auth/mfa/enable", { code });
-        setCodes(data.recovery_codes);
         setSecret("");
         setCode("");
+        completeEnrollment("totp", data.recovery_codes);
       }
     } catch (err) {
       setError(errorMessage(err));
@@ -34,16 +33,6 @@ export function AuthenticatorSetup() {
       setBusy(false);
     }
   }
-  if (codes.length) return (
-    <div className="stack-form">
-      <h2>Save your recovery codes</h2>
-      <p>Keep these in your password manager. Each code works once if you lose your authenticator. They will not be shown again.</p>
-      <pre className="recovery-codes" aria-label="Recovery codes">{codes.join("\n")}</pre>
-      <label className="checkbox-label"><input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} />I saved my recovery codes privately.</label>
-      <button className="button primary" disabled={!saved} onClick={() => applySession(null)}>Continue to sign in</button>
-      <p className="muted">All previous sessions have been revoked. Wait for a fresh authenticator code, then sign in again.</p>
-    </div>
-  );
   return (
     <form className="stack-form" onSubmit={submit}>
       <h2>Add an authenticator</h2>
@@ -59,6 +48,28 @@ export function AuthenticatorSetup() {
       {secret && <button type="button" className="button secondary" disabled={busy} onClick={() => { setSecret(""); setCode(""); setError(null); }}>Start setup again</button>}
     </form>
   );
+}
+
+export function SecurityEnrollmentComplete() {
+  const { securityCompletion, acknowledgeEnrollment } = useAuth();
+  const [saved, setSaved] = useState(false);
+  if (!securityCompletion) return null;
+  const { method, recoveryCodes } = securityCompletion;
+  return <main className="account-security-screen">
+    <Brand />
+    <section className="panel account-security-panel stack-form">
+      <h1>{method === "passkey" ? "Passkey added" : "Authenticator enabled"}</h1>
+      <p>All previous sessions were revoked. Workspace access stays locked until you sign in again.</p>
+      {!!recoveryCodes.length && <>
+        <h2>Save your recovery codes</h2>
+        <p>Keep these single-use codes privately in your password manager. They will not be shown again. Recovery codes are not phishing-resistant.</p>
+        <pre className="recovery-codes" aria-label="Recovery codes">{recoveryCodes.join("\n")}</pre>
+        <label className="checkbox-label"><input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} />I saved my recovery codes privately.</label>
+      </>}
+      <button className="button primary" disabled={!!recoveryCodes.length && !saved} onClick={acknowledgeEnrollment}>Continue to sign in</button>
+      <p className="muted">{method === "passkey" ? "Use your password and passkey at sign-in." : "Wait for a fresh authenticator code, then sign in again."} Keep this screen open until your codes are saved; reloading clears them.</p>
+    </section>
+  </main>;
 }
 
 export function AccountSecuritySetup() {

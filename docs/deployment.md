@@ -12,7 +12,7 @@ Services: frontend static Nginx, FastAPI backend, PostgreSQL 17, Redis 8, and an
 
 Generated `.env` permissions are 0600; `.env`, local database files, and dependency/build artifacts are ignored. Never commit credentials, JWT secrets, provider keys, production logs, or backups.
 
-There is no public sign-up. Use **Settings → Add a person** only after verifying a trusted teammate. Deliver starter passwords privately; newly admitted people must replace them before reading workspace evidence. New production bootstrap accounts must also replace their starter password. Production requires authenticator enrollment, and Settings provides enrollment for development installations with an encryption key. Existing passwords/roles are not replaced by migration. Administrators can disable another account to revoke access.
+There is no public sign-up. Use **Settings → Add a person** only after verifying a trusted teammate. Deliver starter passwords privately; newly admitted people must replace them before reading workspace evidence. New production bootstrap accounts must also replace their starter password. Production requires a TOTP authenticator or user-verified passkey; Settings supports both. Existing passwords/roles are not replaced by migration. Administrators can disable another account to revoke access.
 
 `ALLOWED_HOSTS=localhost,127.0.0.1` restricts backend Host headers; add a deliberate hostname if using another address. API docs are disabled by default (`API_DOCS_ENABLED=false`); enable them only for private development. Production forbids the opt-in.
 
