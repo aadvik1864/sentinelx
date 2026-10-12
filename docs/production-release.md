@@ -87,6 +87,12 @@ The one-day/ten-minute fixture acknowledged all 6,000 new records at 10.001 EPS,
 
 These results clear the tested application-candidate gates, not deployment approval, an untested retained-data footprint, or independent security review. The earlier failures remain documented; the [operator acceptance record](operator-acceptance.md) stays NO-GO until its applicable controls and review are signed off. Only the two fixture-report JSON files are public CI artifacts; credentials, keys, archives and browser captures are not uploaded.
 
+### Validated security follow-up (2026-10-12)
+
+[Run 38252160341](https://github.com/aadvik1864/sentinelx/actions/runs/38252160341) passed all five jobs for `a60b67088061339f9d73c19cbcca17da674d8b62`: SQLite **190 passed/11 skipped**, PostgreSQL **201 passed**, release tools **23 passed** per database job, frontend **49 passed**, and both browser workflows. The one-day/ten-minute fixture achieved **10.001 EPS**, ingestion p95 **0.0378 s** and dashboard p95 **0.6805 s**; restore/content/safety checks and five matching zero-HIGH/CRITICAL image scans passed. Runtime/notifier denied-operation probes and trusted-CA passkey enrollment/sign-in passed. All monitored clocks were stable.
+
+The [follow-up record](security-improvements.md#validated-follow-up-application-2026-10-12) includes the new controls, prior browser-selector failures, detailed evidence and unchanged scope limitations. These application checks do not approve deployment or replace independent review and operator acceptance.
+
 ## Backups and recovery
 
 Install age from a trusted source. Use an approved public recipient; keep the matching private identity offline, mode 0600. Example commands use placeholders, not real credentials:

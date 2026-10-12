@@ -56,10 +56,25 @@ Frontend pages are lazy-loaded while retaining the existing graphite/copper inte
 - The session-independent recovery-code confirmation follow-up passed **49 frontend tests**, including late-session-failure preservation and memory-only acknowledgement, plus frontend lint/build. Targeted passkey regressions passed **17 tests** with one PostgreSQL-only skip; these are not a substitute for exact-commit CI.
 - The first disposable production pilot completed role setup/migrations and demonstrated **seven privilege denials** with privileged API credentials absent, then failed readiness after a **1.509153-second** clock step. The failure and private diagnostics are retained; no clock/token gate was weakened and no live service was restarted.
 
-The updated runtime grants add further append-only evidence/receipt denials. Final source/image scans, full SQLite/PostgreSQL regressions, trusted-CA browser/passkey checks and capacity/restore validation must run on a stable, reserved runner before approving this follow-up. The independent [operator acceptance record](operator-acceptance.md) remains NO-GO.
+Those local observations were not release acceptance. The following CI records distinguish failed candidates from the final passing application checks. The independent [operator acceptance record](operator-acceptance.md) remains NO-GO for deployment.
 
 The [first follow-up CI run](https://github.com/aadvik1864/sentinelx/actions/runs/38249689482), commit `aedc66b489be9790011a66f30ccd1b80b05f92c9`, passed both database jobs, the frontend/development-browser jobs, production capacity/restore checks and exact-image scans, but failed the final browser assertion: its non-exact “Recovery codes” label selector matched both the code block and the acknowledgement checkbox. The selector is now exact; the failed run remains evidence and no application, clock, latency or security gate was relaxed.
 
 Its one-day/ten-minute fixture reached **10.001 EPS**, ingestion p95 **0.0525 s** and dashboard p95 **0.7050 s**, with 120 reads. It verified 11 runtime and six notifier privilege denials, restored **870,001 events/receipts**, compared 17 tables, and recorded zero HIGH/CRITICAL findings across five matching runtime image IDs. Those passing sub-gates do not make its failed overall run an accepted release.
 
 Production browser stdout/stderr now go to exclusive-create 0600 private fixture logs, including assertion diagnostics that could contain newly enrolled recovery codes. Those logs and browser captures are not uploaded. Pass/fail remains an unchanged blocking CI gate; the public output provides only its result.
+
+The [recovery-confirmation candidate run](https://github.com/aadvik1864/sentinelx/actions/runs/38250791574), commit `b953184558862de078f45fb89a5b5ce6cbdfb3fd`, also passed its other jobs/capacity/restore/scanning sub-gates but reproduced the same non-exact browser-selector failure. It is retained as a failed overall run, not accepted by a retry alone.
+
+### Validated follow-up application (2026-10-12)
+
+[Run 38252160341](https://github.com/aadvik1864/sentinelx/actions/runs/38252160341) passed all five jobs for exact application/tooling commit `a60b67088061339f9d73c19cbcca17da674d8b62`:
+
+- SQLite: **190 passed, 11 PostgreSQL-only skips**. PostgreSQL: **201 passed**, including populated upgrade/ownership/grants and concurrent passkey/outbox tests. Release-tool tests: **23 passed** per database job. All observed runner clocks were stable.
+- Frontend: **49 unit tests passed**, lint/build/audits passed. The development investigation browser suite passed **16 tests**; the trusted-CA production password/MFA/passkey workflow also passed.
+- Capacity: **864,000** quiet preloaded synthetic events/receipts plus **6,000** new API deliveries over 600 seconds, **10.001 EPS**, ingestion p95/max **0.0378/0.7822 s**, dashboard p95/max **0.6805/0.8237 s**, with 120 reads. The original latency and clock gates were unchanged.
+- Verified **11 runtime** and **six notifier** privilege denials, privileged API credentials absent, and certificate-expiry warning behavior.
+- PostgreSQL restart and Redis failure/retry passed. Encrypted restoration preserved **870,001 events/receipts**, schema `0008_receipt_metrics`, SHA-256 content across **17 tables**, corrupt-archive rejection and existing-database refusal.
+- All **five exact runtime image IDs** matched the scan summaries, with **zero reported HIGH/CRITICAL findings**. Optional Ollama, proxy deployment and real notification receivers remain separately reviewed operator choices.
+
+This validates only the documented one-day fixture and release profile, not seven-day retention, mixed workloads/bursts, absolute time synchronization, real notification receipt, operational sign-offs or security certification. No live installation was upgraded, migrated, exposed or restarted.
