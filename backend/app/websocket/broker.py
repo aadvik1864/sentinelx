@@ -9,6 +9,7 @@ import redis.asyncio as redis
 from fastapi import APIRouter, WebSocket
 from starlette.concurrency import run_in_threadpool
 
+from app.core.clock import clock_guard
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.security import authenticate_token, limiter
@@ -78,6 +79,8 @@ broker = Broker()
 
 
 def validate(token, channel):
+    if settings.environment == "production" and clock_guard.thread and not clock_guard.healthy():
+        raise ValueError("Server clock requires operator review")
     with SessionLocal() as db:
         user = authenticate_token(token, db)
         if channel == "events" and user.role == "VIEWER":

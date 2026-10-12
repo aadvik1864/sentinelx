@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.base import Base
 
 
 def utcnow():
@@ -25,6 +25,8 @@ class User(Base):
     mfa_pending_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
     mfa_last_step: Mapped[int] = mapped_column(Integer, default=-1)
     mfa_recovery_hashes: Mapped[list] = mapped_column(JSON, default=list)
+    mfa_webauthn_handle: Mapped[str | None] = mapped_column(String(64))
+    passkeys: Mapped[list["WebAuthnCredential"]] = relationship(lazy="selectin")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -57,7 +59,7 @@ class Event(Base):
     hostname: Mapped[str] = mapped_column(String(253), index=True)
     message: Mapped[str] = mapped_column(Text)
     details: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
 
 class LogSource(Base):
@@ -69,6 +71,9 @@ class LogSource(Base):
     log_path: Mapped[str] = mapped_column(String(512), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     token_hash: Mapped[str] = mapped_column(String(64))
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    previous_token_hash: Mapped[str | None] = mapped_column(String(64))
+    previous_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_event_at: Mapped[datetime | None] = mapped_column(DateTime)
@@ -203,3 +208,41 @@ class AuditLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45))
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     details: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+
+
+class NotificationOutbox(Base):
+    __tablename__ = "notification_outbox"
+    __table_args__ = (Index("ix_outbox_pending", "delivered_at", "next_attempt_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    alert_id: Mapped[int] = mapped_column(ForeignKey("alerts.id"), unique=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime)
+    lease_owner: Mapped[str | None] = mapped_column(String(36))
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str] = mapped_column(String(40), default="")
+
+
+class WebAuthnCredential(Base):
+    __tablename__ = "webauthn_credentials"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    credential_id: Mapped[str] = mapped_column(String(2048), unique=True)
+    public_key: Mapped[str] = mapped_column(Text)
+    sign_count: Mapped[int] = mapped_column(BigInteger, default=0)
+    name: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class WebAuthnChallenge(Base):
+    __tablename__ = "webauthn_challenges"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    challenge: Mapped[str] = mapped_column(String(64))
+    auth_version: Mapped[int] = mapped_column(Integer)
+    origin: Mapped[str] = mapped_column(String(300))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)

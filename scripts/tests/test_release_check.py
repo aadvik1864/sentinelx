@@ -20,7 +20,22 @@ def test_small_sample_percentile_uses_nearest_rank():
         release.p95([])
 
 
-@pytest.mark.parametrize("events", [0, -1, 864001, True, "864000; DROP TABLE users"])
+def test_bursts_preserve_minute_budget_and_monotonic_schedule():
+    assert release.scheduled_offset(1, True) == 0.05
+    assert release.scheduled_offset(49, True) == 2.45
+    assert release.scheduled_offset(50, True) == 5
+    assert release.scheduled_offset(600, True) == 60
+    assert all(
+        release.scheduled_offset(index + 1, True)
+        > release.scheduled_offset(index, True)
+        for index in range(1200)
+    )
+    assert release.scheduled_offset(601) == 60.1
+    with pytest.raises(ValueError):
+        release.scheduled_offset(-1)
+
+
+@pytest.mark.parametrize("events", [0, -1, 6048001, True, "864000; DROP TABLE users"])
 def test_history_seed_rejects_unbounded_or_non_integer_sizes(events):
     with pytest.raises(ValueError):
         release.history_seed_sql(events, 1)
@@ -63,9 +78,9 @@ def test_fingerprints_stream_every_table_without_exposing_content(monkeypatch, c
     actual = release.database_fingerprints(
         ["docker", "compose"], {}, "sentinelx_release_test"
     )
-    assert len(actual) == 14
+    assert len(actual) == 17
     assert set(actual.values()) == {hashlib.sha256(content).hexdigest()}
-    assert len(requests) == 14
+    assert len(requests) == 17
     assert all("COPY (SELECT row_to_json" in command[-1] for command, _ in requests)
     assert "private-content" not in capsys.readouterr().out
 

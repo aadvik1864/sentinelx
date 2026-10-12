@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AuthenticatorSetup } from "../components/AccountSecurity";
+import { PasskeySecurity } from "../components/Passkeys";
 import { KeyRound, LockKeyhole, Settings, UserPlus, Users } from "lucide-react";
 import {
   Badge,
@@ -279,8 +280,9 @@ export function SettingsPage() {
           </form>
         </section>
         <section className="panel settings-panel">
-          {user?.mfa_enabled ? <><h2>Two-step sign-in</h2><p>Your authenticator is enabled. Keep your single-use recovery codes in your password manager.</p></> : <AuthenticatorSetup />}
+          {user?.totp_enabled ? <><h2>Authenticator app</h2><p>Your authenticator is enabled. Keep your single-use recovery codes in your password manager.</p></> : <AuthenticatorSetup />}
         </section>
+        <section className="panel settings-panel"><PasskeySecurity /></section>
       </div>
       {admin && (
         <>

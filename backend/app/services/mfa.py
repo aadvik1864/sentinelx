@@ -39,9 +39,7 @@ def decrypt(secret: str) -> str:
 
 
 def verify(user, code: str) -> bool:
-    if not user.mfa_secret:
-        return False
-    if len(code) == 6 and code.isascii() and code.isdigit():
+    if user.mfa_secret and len(code) == 6 and code.isascii() and code.isdigit():
         totp = pyotp.TOTP(decrypt(user.mfa_secret))
         step = int(time.time()) // totp.interval
         for candidate in (step, step - 1, step + 1):

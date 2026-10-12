@@ -12,6 +12,10 @@ values = {
     "JWT_SECRET": secrets.token_urlsafe(48),
     "MFA_ENCRYPTION_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
     "POSTGRES_PASSWORD": secrets.token_urlsafe(24),
+    "POSTGRES_MIGRATION_PASSWORD": secrets.token_urlsafe(24),
+    "POSTGRES_RUNTIME_PASSWORD": secrets.token_urlsafe(24),
+    "POSTGRES_NOTIFICATION_PASSWORD": secrets.token_urlsafe(24),
+    "EGRESS_PROXY_PASSWORD": secrets.token_urlsafe(24),
     "REDIS_PASSWORD": secrets.token_urlsafe(24),
     "BOOTSTRAP_ADMIN_PASSWORD": secrets.token_urlsafe(18),
 }

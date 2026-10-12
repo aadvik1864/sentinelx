@@ -16,8 +16,14 @@ Interactive OpenAPI docs are disabled by default. Development-only opt-in: `API_
 | POST | `/auth/change-password` | Authenticated, current password required |
 | POST | `/auth/mfa/setup` | Authenticated, `{ password }`; 10-minute enrollment key/URI |
 | POST | `/auth/mfa/enable` | Authenticated, `{ code }`; enables TOTP, returns recovery codes once, revokes sessions |
+| GET | `/auth/passkeys` | Authenticated; own passkey names/times, never keys or credential handles |
+| POST | `/auth/passkeys/register/options` | Authenticated, `{ password }`; user-verified registration options |
+| POST | `/auth/passkeys/register/verify` | Authenticated, `{ challenge_id, credential, name? }`; first-factor recovery codes once, revokes sessions |
+| POST | `/auth/passkeys/login/options` | Public/rate limited, `{ email, password }`; options for that verified account |
+| POST | `/auth/passkeys/login/verify` | Public/rate limited, `{ challenge_id, credential }`; verified session |
+| POST | `/auth/passkeys/{id}/remove` | Authenticated, `{ password }`; own credential only, cannot remove last factor, revokes sessions |
 
-Login accepts `{ "email": "…", "password": "…", "otp": "…" }`; `otp` is optional for an unenrolled account and required for enrolled accounts (TOTP or single-use recovery code). It returns `{ "access_token": "…", "token_type": "bearer", "user": { … } }`, with `must_change_password`, `mfa_enabled`, and `mfa_required` flags. New accounts must change starter passwords; production requires MFA enrollment. Setup-only sessions cannot access workspace REST endpoints or sockets. Password changes and MFA enablement revoke prior sessions; sign in again with a fresh TOTP step or recovery code. Enrollment/recovery credentials are never included in subsequent user reads or audit metadata.
+Password login accepts `{ "email": "…", "password": "…", "otp": "…" }`; enrolled accounts need TOTP or a single-use recovery code, or must use the password-plus-passkey flow. Session responses include `must_change_password`, `mfa_enabled`, `totp_enabled`, `passkey_count`, and `mfa_required`. New accounts must replace starter passwords; production requires an enrolled factor. Setup-only sessions cannot access workspace REST endpoints or sockets. Enrollment and password changes revoke prior sessions. Passkey challenges expire after five minutes, are single-use and account/version/origin bound, and require device user verification; cross-origin/embedded assertions are rejected. Enrollment/recovery credentials never appear in subsequent user reads/audits.
 
 Access tokens belong in `Authorization: Bearer …`, not local storage or URLs. The browser keeps them in memory. Refresh cookies use the `/api/v1/auth` path, SameSite Strict, and HTTP-only; Secure is mandatory in production. Cookie-backed mutations require an approved `Origin` header.
 
@@ -66,11 +72,11 @@ Field search accepts `source_ip:203.0.113.42 severity:medium`, quoted strings, a
 | GET | `/sources/agent` | ADMIN/ANALYST; downloadable Python agent |
 | POST | `/sources` | ADMIN; `{ name, kind, hostname, log_path? }` |
 | PATCH | `/sources/{id}` | ADMIN; `{ enabled }` |
-| POST | `/sources/{id}/rotate-key` | ADMIN; revokes the previous key immediately |
+| POST | `/sources/{id}/rotate-key` | ADMIN; optional `{ valid_days: 90, overlap_seconds: 0 }`; defaults to immediate revocation |
 | POST | `/sources/{id}/heartbeat` | That source's collector key; `{ state: "listening" }` or `{ state: "error", error: "file_unavailable" }` |
 | POST | `/sources/{id}/events` | That source's collector key; `{ record_key, line, timestamp? }` |
 
-Creating/replacing a key returns `{ source, collector_key }` once. Only its SHA-256 digest is stored; read responses/audit metadata never return the key or digest. Keys authorize ingestion/health **only for their source**, not dashboard access, raw-event reads, or source management. They have no automatic expiry; pause or replace them to revoke use. Keep private configuration files at 0600.
+Creating/replacing a key returns `{ source, collector_key }` once. Only its SHA-256 digest is stored; read responses/audits never return keys or digests. Keys authorize ingestion/health **only for their source**. New keys expire after 90 days; rotation accepts 1–365 days and a deliberate overlap of 0–600 seconds. The prior key never survives its own expiry, and a second rotation replaces the previous overlap slot. Migrated legacy keys remain unexpired until explicitly rotated. Expired credentials return 401 and source status `key_expired`; pause rejects both keys. Retain the collector's original checkpoint file when replacing its private key.
 
 Supported kinds: `linux`, `nginx`, `apache`, `application`. The registered kind/hostname are authoritative; collectors cannot override them in a record. `record_key` is source-scoped, 16–128 safe identifier characters. Accepted retries return `{ event_id, duplicate: true }` without a second event/detection, including after approved raw-event retention: receipt tombstones preserve the original acknowledgement ID, which need not still resolve to retained raw data. Different content under the same key returns 409. Linux collection requires an explicit occurrence timestamp; JSON records require a timestamp in the envelope or record. Common/combined web logs supply their own occurrence time. Timestamp validation does not silently use receipt time for missing collector timestamps.
 

@@ -65,7 +65,13 @@ class AbuseIPDBProvider:
         if kind != "ip" or not ipaddress.ip_address(value).is_global:
             return LocalContextProvider().lookup(kind, value)
         try:
-            with httpx.Client(timeout=10, follow_redirects=False) as client:
+            settings = get_settings()
+            with httpx.Client(
+                timeout=10,
+                follow_redirects=False,
+                trust_env=False,
+                **({"proxy": settings.egress_proxy_url} if settings.egress_proxy_url else {}),
+            ) as client:
                 response = client.get(
                     "https://api.abuseipdb.com/api/v2/check",
                     params={"ipAddress": value, "maxAgeInDays": 90},

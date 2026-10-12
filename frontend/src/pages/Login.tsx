@@ -11,7 +11,10 @@ import {
 import { Navigate } from "react-router-dom";
 import { Brand, ErrorBox } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
-import { errorMessage } from "../services/api";
+import { api, applySession, errorMessage } from "../services/api";
+import type { Session } from "../types";
+import { startAuthentication } from "@simplewebauthn/browser";
+import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { ShapeGrid } from "../components/react-bits/ShapeGrid";
 import { SignalFlow } from "../components/SignalFlow";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -38,6 +41,18 @@ export function LoginPage() {
     } finally {
       setBusy(false);
     }
+  }
+  async function passkeyLogin() {
+    if (busy || !email || !password) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { data } = await api.post<{ challenge_id: string; options: PublicKeyCredentialRequestOptionsJSON }>("/auth/passkeys/login/options", { email, password });
+      const credential = await startAuthentication({ optionsJSON: data.options });
+      const response = await api.post<Session>("/auth/passkeys/login/verify", { challenge_id: data.challenge_id, credential });
+      applySession(response.data);
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setBusy(false); }
   }
   return (
     <div className="login-page">
@@ -155,6 +170,7 @@ export function LoginPage() {
               {busy ? "Please wait…" : "Sign in"}
               <ArrowRight size={17} />
             </button>
+            <button type="button" className="button secondary" disabled={busy || !email || !password} onClick={passkeyLogin}>Sign in with passkey</button>
           </form>
           <p className="login-switch">
             Need access? Ask your workspace administrator to create an account.

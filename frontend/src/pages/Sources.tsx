@@ -32,6 +32,7 @@ function systemType(kind: LogSource["kind"]) {
 }
 
 function statusHelp(source: LogSource) {
+  if (source.status === "key_expired") return "The connection key expired. Ask an administrator to replace it and update the helper’s private settings, keeping its existing checkpoint file.";
   if (source.status === "error") {
     if (source.last_error.includes("read its configured log file"))
       return "The helper cannot read the activity file. Ask the server administrator to check its location and read permissions.";
@@ -70,6 +71,7 @@ export function SourcesPage() {
   const [step, setStep] = useState(1);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [rotate, setRotate] = useState<LogSource | null>(null);
+  const [overlap, setOverlap] = useState(false);
   const [kind, setKind] = useState<LogSource["kind"]>("linux");
   const [name, setName] = useState("");
   const [hostname, setHostname] = useState("");
@@ -86,7 +88,7 @@ export function SourcesPage() {
     if (!location.state?.sourceFilterChange) setQuery(params.get("q") ?? "");
   }, [params, location.state]);
   const items = data?.items ?? [];
-  const attention = (source: LogSource) => ["offline", "error", "not_connected"].includes(source.status);
+  const attention = (source: LogSource) => ["offline", "error", "not_connected", "key_expired"].includes(source.status);
   const filtered = items.filter((source) => {
     const matchesStatus = filter === "all" || filter === "attention" && attention(source) || source.status === filter;
     return matchesStatus && `${source.name} ${source.hostname} ${systemType(source.kind)}`.toLowerCase().includes(query.toLowerCase().trim());
@@ -168,11 +170,11 @@ export function SourcesPage() {
     if (!rotate) return;
     setBusy(true);
     try {
-      const result = await api.post<Setup>(`/sources/${rotate.id}/rotate-key`);
+      const result = await api.post<Setup>(`/sources/${rotate.id}/rotate-key`, { overlap_seconds: overlap ? 300 : 0 });
       setRotate(null);
       setSetup(result.data);
       reconcile();
-      notify("Old connection key disabled. Download the new settings and update the helper.");
+      notify(overlap ? "New key created. Update the helper within five minutes, keeping its checkpoint file." : "Old connection key disabled. Download the new settings and update the helper.");
     } catch (err) {
       notify(errorMessage(err), true);
     } finally {
@@ -248,7 +250,8 @@ export function SourcesPage() {
                   <div><dt>Activity records received</dt><dd>{source.total_events.toLocaleString()}</dd></div>
                   <div><dt>Connection last responded</dt><dd>{source.last_heartbeat_at ? time(source.last_heartbeat_at, true) : "Not yet connected"}</dd></div>
                   <div><dt>Last activity received</dt><dd>{source.last_event_at ? time(source.last_event_at, true) : "No records yet"}</dd></div>
-                  <div><dt>Activity file location</dt><dd><code>{source.log_path || "Not specified"}</code></dd></div>
+                   <div><dt>Activity file location</dt><dd><code>{source.log_path || "Not specified"}</code></dd></div>
+                   <div><dt>Connection key expires</dt><dd>{source.token_expires_at ? time(source.token_expires_at, true) : "Legacy key: administrator review required"}</dd></div>
                 </dl>
                 {source.last_error && (
                   <details className="technical-message">
@@ -262,7 +265,7 @@ export function SourcesPage() {
                       <button className="text-button" disabled={busy} onClick={() => pause(source)}>
                         {source.enabled ? "Pause collection" : "Resume collection"}
                       </button>
-                      <button className="text-button" disabled={busy} onClick={() => setRotate(source)}>Replace connection key</button>
+                      <button className="text-button" disabled={busy} onClick={() => { setOverlap(false); setRotate(source); }}>Replace connection key</button>
                     </>
                   )}
                 </div>
@@ -349,7 +352,8 @@ export function SourcesPage() {
       {rotate && (
         <Modal title="Replace this system’s connection key?" onClose={() => !busy && setRotate(null)}>
           <p className="muted">A connection key is the helper’s private pass to send activity. Replace it only if the settings were lost or shared with someone who should not have them.</p>
-          <div className="notice"><ShieldCheck size={18} /><p>The old key for {rotate.name} stops working immediately. Download the new settings, update that system’s helper, and restart it. Replacing a key does not restart the helper for you.</p></div>
+          <label className="checkbox-label"><input type="checkbox" checked={overlap} onChange={(event) => setOverlap(event.target.checked)} />Keep the old key valid for up to five minutes during a planned rotation. Do not enable this for a suspected leaked key.</label>
+          <div className="notice"><ShieldCheck size={18} /><p>The old key for {rotate.name} {overlap ? "expires within five minutes" : "stops working immediately"}. New keys expire after 90 days. Update the helper’s private key without replacing its existing checkpoint file. Replacing a key does not restart the helper for you.</p></div>
           <div className="source-detail-actions">
             <button className="button secondary" disabled={busy} onClick={() => setRotate(null)}>Cancel</button>
             <button className="button danger" disabled={busy} onClick={replaceKey}>

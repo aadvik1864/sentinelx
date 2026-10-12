@@ -39,10 +39,20 @@ def p95(values):
     return sorted(values)[math.ceil(len(values) * 0.95) - 1]
 
 
+def scheduled_offset(index, burst=False):
+    if type(index) is not int or index < 0:
+        raise ValueError("Expected a nonnegative delivery index")
+    minute, position = divmod(index, 600)
+    # Fifty deliveries at 20 EPS, then idle, preserving the ten-EPS minute budget.
+    return minute * 60 + (
+        position * 0.05 if burst and position < 50 else position * 0.1
+    )
+
+
 def history_seed_sql(events: int, source_id: int):
     """Synthetic fixture only: prior-day volume, not historical ingestion/detection testing."""
-    if type(events) is not int or not 1 <= events <= 864000:
-        raise ValueError("Historical fixture size must be 1–864000 records")
+    if type(events) is not int or not 1 <= events <= 6048000:
+        raise ValueError("Historical fixture size must be 1–6048000 records")
     if type(source_id) is not int or source_id <= 0:
         raise ValueError("Expected a positive fixture source ID")
     return f"""
@@ -85,6 +95,9 @@ def database_fingerprints(compose, environment, database):
         "assets": "id",
         "iocs": "id",
         "incident_iocs": "incident_id,ioc_id",
+        "notification_outbox": "id",
+        "webauthn_credentials": "id",
+        "webauthn_challenges": "id",
     }
     fingerprints = {}
     for table, order in tables.items():
@@ -153,9 +166,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seconds", type=int, default=120)
     parser.add_argument(
+        "--bursts",
+        action="store_true",
+        help="Add bounded 20 EPS bursts without changing the ten-EPS minute budget",
+    )
+    parser.add_argument(
         "--history-events",
         type=int,
-        choices=(0, 100000, 864000),
+        choices=(0, 100000, 864000, 6048000),
         default=0,
         help="Directly seed synthetic quiet history before API throughput measurement",
     )
@@ -268,6 +286,9 @@ def main():
             secrets.token_bytes(32)
         ).decode(),
         "POSTGRES_PASSWORD": secrets.token_urlsafe(24),
+        "POSTGRES_MIGRATION_PASSWORD": secrets.token_urlsafe(24),
+        "POSTGRES_RUNTIME_PASSWORD": secrets.token_urlsafe(24),
+        "POSTGRES_NOTIFICATION_PASSWORD": secrets.token_urlsafe(24),
         "REDIS_PASSWORD": secrets.token_urlsafe(24),
         "POSTGRES_DATABASE": "sentinelx_release_test",
         "BOOTSTRAP_ADMIN_EMAIL": "admin@sentinelx.dev",
@@ -277,6 +298,8 @@ def main():
         "SEED_DEMO": "false",
         "LIVE_MONITORING": "true",
         "LLM_PROVIDER": "offline",
+        "LLM_API_KEY": "",
+        "ABUSEIPDB_API_KEY": "",
         "API_DOCS_ENABLED": "false",
         "ALLOWED_HOSTS": "localhost,127.0.0.1",
         "ALLOWED_ORIGINS": "https://localhost:18443",
@@ -308,6 +331,7 @@ def main():
         "project": project,
         "duration_seconds": args.seconds,
         "target_eps": 10,
+        "bursts": args.bursts,
         "preloaded_events": args.history_events,
         "history_profile": "quiet Linux authentication; direct fixture seed, not replayed ingestion",
         "tls_verified": False,
@@ -325,6 +349,32 @@ def main():
             env=environment,
         )
         report["images"] = {}
+        privileges = subprocess.run(
+            compose + ["exec", "-T", "backend", "python", "-m", "app.runtime_checks"],
+            check=True,
+            env=environment,
+            capture_output=True,
+            text=True,
+        )
+        report.update(json.loads(privileges.stdout))
+        notifier = subprocess.run(
+            compose
+            + [
+                "run",
+                "--rm",
+                "--no-deps",
+                "database-setup",
+                "python",
+                "-m",
+                "app.runtime_checks",
+                "--notifier",
+            ],
+            check=True,
+            env=environment,
+            capture_output=True,
+            text=True,
+        )
+        report.update(json.loads(notifier.stdout))
         for service in ("backend", "frontend", "nginx", "postgres", "redis"):
             container = subprocess.run(
                 compose + ["ps", "-q", service],
@@ -349,6 +399,27 @@ def main():
         ) as client:
             wait_ready(client)
             report["tls_verified"] = True
+            health_command = [
+                os.sys.executable,
+                str(ROOT / "scripts/health_check.py"),
+                "--origin",
+                values["HTTPS_ORIGIN"],
+                "--ca-file",
+                str(tls / "ca.pem"),
+            ]
+            subprocess.run(
+                health_command + ["--certificate-min-days", "0"],
+                check=True,
+                env=environment,
+                capture_output=True,
+            )
+            assert (
+                subprocess.run(
+                    health_command, env=environment, capture_output=True
+                ).returncode
+                != 0
+            )
+            report["certificate_expiry_alert_verified"] = True
             assert (
                 "max-age=31536000"
                 in client.get("/").headers["strict-transport-security"]
@@ -549,7 +620,7 @@ def main():
             start = time.monotonic()
             with ThreadPoolExecutor(max_workers=6) as executor:
                 for index in range(count):
-                    deadline = start + index / 10
+                    deadline = start + scheduled_offset(index, args.bursts)
                     time.sleep(max(0, deadline - time.monotonic()))
                     if index and index % 3000 == 0:
                         session = require(client.post("/api/v1/auth/refresh"))
@@ -713,7 +784,7 @@ def main():
             restored_counts["events"] == args.history_events + count + 1
             and restored_counts["receipts"] == args.history_events + count + 1
             and restored_counts["users"] == 1
-            and restored_counts["revision"] == "0005_receipt_tombstones"
+            and restored_counts["revision"] == "0008_receipt_metrics"
         )
         report["encrypted_restore"] = restored_counts
         assert fingerprints("sentinelx_restore_release") == original

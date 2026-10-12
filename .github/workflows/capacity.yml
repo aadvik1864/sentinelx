@@ -1,0 +1,45 @@
+name: Extended isolated capacity
+on:
+  workflow_dispatch:
+    inputs:
+      history:
+        description: Synthetic history size; seven days needs substantial reserved storage
+        type: choice
+        options: ["864000", "6048000"]
+        default: "6048000"
+      seconds:
+        description: Sustained ten-EPS duration (600–3600 seconds)
+        type: choice
+        options: ["600", "1800", "3600"]
+        default: "1800"
+permissions:
+  contents: read
+jobs:
+  capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: "3.12"}
+      - run: pip install -r backend/requirements.txt
+      - run: sudo apt-get update && sudo apt-get install -y age
+      - name: Reserved-storage preflight
+        run: |
+          python - <<'PY'
+          import shutil
+          free = shutil.disk_usage('/').free
+          if free < 12 * 1024**3:
+              raise SystemExit('Need at least 12 GiB free before the extended fixture; use a larger isolated runner')
+          print('Extended-fixture storage preflight passed')
+          PY
+      - name: Seven-day-capable sustained and burst acceptance
+        env:
+          HISTORY: ${{ inputs.history }}
+          DURATION_SECONDS: ${{ inputs.seconds }}
+        run: python scripts/check_runner_clock.py -- python scripts/release_check.py --seconds "$DURATION_SECONDS" --history-events "$HISTORY" --bursts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: extended-capacity-report
+          path: /tmp/opencode/sentinelx-release-*/report.json

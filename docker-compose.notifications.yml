@@ -1,0 +1,28 @@
+# Opt-in with the production and controlled-egress overlays; no implicit notification scheduling.
+services:
+  notifications:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    command: [sh, -c, 'exec python -m app.notifications --apply --confirm-database "$$POSTGRES_DATABASE"']
+    environment:
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-sentinelx}
+      DATABASE_URL: postgresql+psycopg://sentinelx_notifier:${POSTGRES_NOTIFICATION_PASSWORD:?Generate a notifier-only credential}@postgres:5432/${POSTGRES_DATABASE:-sentinelx}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:?Approve an HTTPS notification receiver}
+      ALERT_WEBHOOK_ALLOWED_HOSTS: ${ALERT_WEBHOOK_ALLOWED_HOSTS:?Approve its exact hostname}
+      ALERT_WEBHOOK_TOKEN: ${ALERT_WEBHOOK_TOKEN:-}
+      EGRESS_PROXY_URL: http://sentinelx:${EGRESS_PROXY_PASSWORD}@egress-proxy:8081
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      egress-proxy: {condition: service_started}
+    networks: [internal]
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 64
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

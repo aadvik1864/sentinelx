@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, applySession, errorMessage } from "../services/api";
 import { useAuth } from "../store/AuthContext";
 import { Brand, ErrorBox } from "./ui";
+import { AddPasskey } from "./Passkeys";
 
 export function AuthenticatorSetup() {
   const [password, setPassword] = useState("");
@@ -66,6 +67,7 @@ export function AccountSecuritySetup() {
   const [newPassword, setNewPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [method, setMethod] = useState("totp");
   async function change(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -91,7 +93,10 @@ export function AccountSecuritySetup() {
         <label>New password<input type="password" autoComplete="new-password" value={newPassword} minLength={12} maxLength={128} required disabled={busy} onChange={(event) => setNewPassword(event.target.value)} /></label>
         <ErrorBox message={error} />
         <button className="button primary" disabled={busy}>{busy ? "Changing password…" : "Change password and sign out"}</button>
-      </form> : <AuthenticatorSetup />}
+      </form> : <>
+        <label>Sign-in protection<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="totp">Authenticator app</option><option value="passkey">Passkey or security key</option></select></label>
+        {method === "totp" ? <AuthenticatorSetup /> : <AddPasskey />}
+      </>}
     </section>
     <button className="button secondary" onClick={() => { logout().catch((err) => setError(errorMessage(err))); }}>Sign out</button>
     <ErrorBox message={!user?.must_change_password ? error : null} />

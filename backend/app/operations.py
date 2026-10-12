@@ -19,6 +19,8 @@ from app.models import (
     RefreshSession,
     SourceReceipt,
     User,
+    WebAuthnChallenge,
+    WebAuthnCredential,
     utcnow,
 )
 from app.services.serialization import serialize
@@ -96,6 +98,11 @@ def main():
     retention.add_argument("--batch-size", type=int, default=1000)
     reset = commands.add_parser("reset-mfa")
     reset.add_argument("--user-id", type=int, required=True)
+    reset.add_argument(
+        "--include-passkeys",
+        action="store_true",
+        help="Also revoke enrolled passkeys after independent identity verification",
+    )
     for command in (retention, reset):
         command.add_argument("--apply", action="store_true")
         command.add_argument("--confirm-database", default="")
@@ -115,6 +122,11 @@ def main():
                 parser.error("User not found")
             report = {"user_id": user.id, "apply": args.apply}
             if args.apply:
+                if args.include_passkeys:
+                    db.execute(
+                        delete(WebAuthnCredential).where(WebAuthnCredential.user_id == user.id)
+                    )
+                db.execute(delete(WebAuthnChallenge).where(WebAuthnChallenge.user_id == user.id))
                 user.mfa_secret = None
                 user.mfa_pending_secret = None
                 user.mfa_pending_expires_at = None
@@ -126,7 +138,14 @@ def main():
                     .where(RefreshSession.user_id == user.id)
                     .values(revoked=True)
                 )
-                audit(db, None, "OPERATOR_MFA_RESET", "user", user.id)
+                audit(
+                    db,
+                    None,
+                    "OPERATOR_MFA_RESET",
+                    "user",
+                    user.id,
+                    details={"include_passkeys": args.include_passkeys},
+                )
                 db.commit()
         else:
             if (

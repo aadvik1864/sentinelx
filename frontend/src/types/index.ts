@@ -7,6 +7,8 @@ export interface User {
   role: Role;
   must_change_password?: boolean;
   mfa_enabled?: boolean;
+  totp_enabled?: boolean;
+  passkey_count?: number;
   mfa_required?: boolean;
   disabled?: boolean;
   created_at: string;
@@ -148,7 +150,8 @@ export interface LogSource {
   log_path: string;
   enabled: boolean;
   status:
-    "not_connected" | "receiving" | "waiting" | "offline" | "error" | "paused";
+    "not_connected" | "receiving" | "waiting" | "offline" | "error" | "paused" | "key_expired";
+  token_expires_at?: string | null;
   last_heartbeat_at: string | null;
   last_event_at: string | null;
   last_event_timestamp: string | null;

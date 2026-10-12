@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     access_token_minutes: int = Field(default=15, ge=1, le=15)
     refresh_token_days: int = Field(default=7, ge=1, le=7)
     mfa_encryption_key: str = ""
+    webauthn_rp_id: str = "localhost"
 
     @property
     def require_mfa(self) -> bool:
@@ -40,6 +41,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "qwen3:1.7b"
     abuseipdb_api_key: str = ""
+    egress_proxy_url: str = ""
+    external_allowed_hosts: str = "api.openai.com,api.abuseipdb.com"
 
     @property
     def ai_provider(self) -> str:
@@ -70,8 +73,24 @@ class Settings(BaseSettings):
             raise ValueError(
                 "ALLOWED_HOSTS must explicitly list trusted hostnames, without wildcards"
             )
+        if self.webauthn_rp_id not in self.hosts or any(
+            char in self.webauthn_rp_id for char in "/:@*"
+        ):
+            raise ValueError("WEBAUTHN_RP_ID must be one exact trusted hostname")
         if self.llm_provider == "openai" and not self.llm_api_key:
             raise ValueError("LLM_PROVIDER=openai requires LLM_API_KEY")
+        if self.ai_provider == "openai":
+            url = urlsplit(self.llm_base_url)
+            if (
+                url.scheme != "https"
+                or url.hostname not in self.external_allowed_hosts.split(",")
+                or url.port not in {None, 443}
+                or url.username
+                or url.password
+                or url.query
+                or url.fragment
+            ):
+                raise ValueError("External AI requires an explicitly allowlisted HTTPS provider")
         if self.llm_provider == "ollama":
             url = urlsplit(self.ollama_base_url)
             if (
@@ -87,6 +106,26 @@ class Settings(BaseSettings):
             if not self.ollama_model.strip() or "cloud" in self.ollama_model.lower():
                 raise ValueError("Ollama requires a downloaded local model, not a cloud model")
         if self.environment == "production":
+            if (
+                self.ai_provider == "openai" or self.abuseipdb_api_key
+            ) and not self.egress_proxy_url:
+                raise ValueError(
+                    "Production external providers require the controlled-egress proxy"
+                )
+            if self.egress_proxy_url:
+                proxy = urlsplit(self.egress_proxy_url)
+                if (
+                    proxy.scheme != "http"
+                    or proxy.hostname != "egress-proxy"
+                    or proxy.port != 8081
+                    or proxy.username != "sentinelx"
+                    or not proxy.password
+                    or len(proxy.password) < 24
+                    or proxy.path
+                    or proxy.query
+                    or proxy.fragment
+                ):
+                    raise ValueError("Use only the authenticated private controlled-egress proxy")
             if self.api_docs_enabled:
                 raise ValueError("API documentation must be disabled in production")
             if len(self.jwt_secret) < 32 or not self.cookie_secure:

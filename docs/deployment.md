@@ -16,10 +16,10 @@ There is no public sign-up. Use **Settings → Add a person** only after verifyi
 
 `ALLOWED_HOSTS=localhost,127.0.0.1` restricts backend Host headers; add a deliberate hostname if using another address. API docs are disabled by default (`API_DOCS_ENABLED=false`); enable them only for private development. Production forbids the opt-in.
 
-Backend startup runs Alembic migrations before Uvicorn. Health endpoints:
+Development startup runs Alembic migrations before Uvicorn; production uses isolated one-shot migration/bootstrap jobs. Health endpoints:
 
 - `/health/live`: process responds.
-- `/health/ready`: database and configured Redis respond.
+- `/health/ready`: database and configured Redis respond; production additionally checks local clock-step observation.
 
 For timestamp-preserving real monitoring and a separate database, follow [Connect and monitor real systems](monitoring.md). `POSTGRES_DATABASE` controls Compose's backend connection; changing it does not create a database inside an already initialized PostgreSQL volume. No data volumes need to be deleted.
 
@@ -27,7 +27,7 @@ The backend trusts forwarded headers because it is reachable only through the in
 
 ## Optional HTTPS listener
 
-`docker-compose.https.yml` adds TLS on a **loopback-only** port and sets backend production gates. It does not obtain certificates, alter your machine's trust store, publish the service publicly, or select a new database. Keep the existing live database, source keys, and collector checkpoints. The HTTP listener remains on `127.0.0.1:8080` for local collection/health; use only the HTTPS origin for browser sign-in once Secure cookies are enabled.
+`docker-compose.https.yml` adds TLS on a **loopback-only** port and sets production flags. Use it with `docker-compose.production.yml` for the required least-privilege database identity; HTTPS flags alone cannot start a privileged API. It does not obtain certificates, change trust stores, publish publicly, or select a new database. Do not apply these files to the existing live installation without separate deployment approval.
 
 Supply a valid certificate/full chain matching your chosen hostname and a dedicated private key. The mounted files must be readable by Nginx UID/GID 101; use a restricted directory and reviewed ownership/group permissions, **not a world-readable private key**. Keep certificate/key files outside the repository/build context. Define these settings privately in `.env`:
 
@@ -44,12 +44,12 @@ MFA_ENCRYPTION_KEY=<privately-generated-key>
 `HTTPS_ORIGIN` is an exact origin, with no trailing slash, path, credentials, query, or fragment. Ensure DNS (or an operator-managed hosts entry) resolves the hostname to this installation and that clients trust the certificate. The example hostname/paths are placeholders, not provisioned infrastructure.
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.https.yml config --quiet
-docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --no-deps --build --wait backend nginx
-docker compose -f docker-compose.yml -f docker-compose.https.yml restart nginx
+docker compose --project-name "${APPROVED_PROJECT:?Select a separate approved project}" --env-file "${APPROVED_ENV_FILE:?Select its private configuration}" -f docker-compose.yml -f docker-compose.https.yml -f docker-compose.production.yml config --quiet
+# Only after deployment approval: run the dependency chain, not --no-deps backend.
+docker compose --project-name "$APPROVED_PROJECT" --env-file "$APPROVED_ENV_FILE" -f docker-compose.yml -f docker-compose.https.yml -f docker-compose.production.yml up -d --build --wait
 ```
 
-Use both Compose files for subsequent backend/gateway operations; the base file alone removes the override. If starting the entire stack with local AI, include `--profile local-ai`. After renewal, restart Nginx to reload the mounted files. Verify HTTPS, Secure refresh cookies, HTTPS/WSS connections, HSTS, and host/origin rejection before any remote exposure. HSTS is sent only on the TLS listener (`max-age=31536000`, without `includeSubDomains`); it applies to the hostname, not just this port. Do not enable it on a shared hostname unintentionally. The collector is not automatically moved to HTTPS; local loopback HTTP remains authorized.
+Use all three Compose files for subsequent backend/gateway operations; the base file alone removes the override. If starting the entire stack with local AI, include `--profile local-ai`. After renewal, restart only the approved target's Nginx to reload mounted files. Verify HTTPS, Secure cookies, WSS, HSTS and host/origin rejection before remote exposure. HSTS applies to the hostname, not just this port; do not enable it on a shared hostname unintentionally. The collector is not automatically moved to HTTPS; local loopback HTTP remains authorized.
 
 ## Production adaptation (not turnkey cloud provisioning)
 

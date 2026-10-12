@@ -1,6 +1,7 @@
 import hashlib
 import threading
 from datetime import timedelta
+from uuid import uuid4
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -12,10 +13,12 @@ from app.models import (
     Incident,
     IncidentEvent,
     LogSource,
+    NotificationOutbox,
     SourceReceipt,
     utcnow,
 )
 from app.schemas import EventInput
+from app.services.redaction import redact
 from app.services.serialization import serialize
 from app.websocket.broker import broker
 
@@ -133,12 +136,15 @@ def ingest(
                 signed=True,
             )
             db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+        safe = data.model_copy(
+            update={"message": redact(data.message), "metadata": redact(data.metadata)}
+        )
         event = Event(
-            **data.model_dump(exclude={"metadata", "source_ip", "destination_ip", "timestamp"}),
+            **safe.model_dump(exclude={"metadata", "source_ip", "destination_ip", "timestamp"}),
             timestamp=data.timestamp.replace(tzinfo=None),
             source_ip=str(data.source_ip) if data.source_ip else None,
             destination_ip=str(data.destination_ip) if data.destination_ip else None,
-            details=data.metadata,
+            details=safe.metadata,
         )
         db.add(event)
         db.flush()
@@ -204,6 +210,18 @@ def ingest(
             db.add(alert)
             db.flush()
             alerts.append(alert)
+            # Committed with the alert, not a best-effort request made after commit.
+            db.add(
+                NotificationOutbox(
+                    id=str(uuid4()),
+                    alert_id=alert.id,
+                    payload={
+                        "alert_id": alert.id,
+                        "severity": alert.severity,
+                        "incident_id": alert.incident_id,
+                    },
+                )
+            )
             updates.append(("alerts", "new_alert", alert))
         if source:
             source.last_heartbeat_at = utcnow()

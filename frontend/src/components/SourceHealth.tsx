@@ -10,6 +10,7 @@ export const sourceLabels = {
   offline: "Disconnected",
   error: "Needs attention",
   paused: "Paused",
+  key_expired: "Connection key expired",
 };
 
 export function SourceIcon({ kind }: { kind: LogSource["kind"] }) {

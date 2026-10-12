@@ -27,12 +27,22 @@ EXCLUDED = (
     "/api/v1/auth/refresh",
 )
 SECRET_KEY = re.compile(
-    r"password|passwd|secret|token|authorization|cookie|api.?key|credential", re.I
+    r"password|passwd|secret|token|authorization|cookie|api.?key|credential|private.?key",
+    re.I,
 )
 SECRET_VALUE = re.compile(
     r"(?i)\b(password|passwd|token|secret|api[_-]?key)\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|[^\s,;]+)"
 )
-BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[a-zA-Z0-9._~+/=-]+")
+BEARER_VALUE = re.compile(r"(?i)\b(?:Bearer|Basic)\s+[a-zA-Z0-9._~+/=-]+")
+PRIVATE_KEY = re.compile(
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)"
+)
+JWT_VALUE = re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b")
+TOKEN_VALUE = re.compile(
+    r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sxcol_[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{20,})\b"
+)
+URL_CREDENTIAL = re.compile(r"(?i)(https?://)[^/\s@]+@")
+URL_QUERY = re.compile(r"(?i)(https?://[^\s?\"'<>]+)\?[^\s\"'<>]*")
 SYSLOG_TIME = re.compile(r"^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})")
 ISO_TIME = re.compile(r"^(\d{4}-\d{2}-\d{2}T\S+)")
 
@@ -98,6 +108,11 @@ def scrub(value):
     if isinstance(value, list):
         return [scrub(item) for item in value]
     if isinstance(value, str):
+        value = PRIVATE_KEY.sub("[redacted-private-key]", value)
+        value = URL_CREDENTIAL.sub(r"\1[redacted]@", value)
+        value = URL_QUERY.sub(r"\1?[redacted-query]", value)
+        value = JWT_VALUE.sub("[redacted-jwt]", value)
+        value = TOKEN_VALUE.sub("[redacted-key]", value)
         value = SECRET_VALUE.sub(lambda match: f"{match[1]}=[redacted]", value)
         return BEARER_VALUE.sub("Bearer [redacted]", value)
     return value

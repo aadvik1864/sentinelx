@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from app.core.config import get_settings
 from app.models import IOC, Alert, Event, IncidentEvent, IncidentIOC
 from app.schemas import Analysis
+from app.services.redaction import redact
 from app.services.serialization import serialize
 
 SYSTEM_PROMPT = """You are SentinelX, an advisory SOC investigation assistant.
@@ -206,7 +207,7 @@ def provider_context(context, *, local):
             result["mitre_techniques"].pop()
         else:
             raise ValueError("Investigation context exceeds the input budget")
-    return result
+    return redact(result)
 
 
 def validate_output(content, context):
@@ -290,6 +291,11 @@ def analyze(context):
             timeout=httpx.Timeout(settings.llm_timeout_seconds, connect=5),
             follow_redirects=False,
             trust_env=False,
+            **(
+                {"proxy": settings.egress_proxy_url}
+                if not local and settings.egress_proxy_url
+                else {}
+            ),
         ) as client:
             if local:
                 response = client.post(

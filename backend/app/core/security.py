@@ -95,8 +95,8 @@ def authenticate_token(token: str, db: Session, *, allow_setup: bool = False) ->
             raise ValueError("Invalid session")
         if not allow_setup and (
             user.must_change_password
-            or (settings.require_mfa and not user.mfa_secret)
-            or (user.mfa_secret and not session.mfa_verified)
+            or (settings.require_mfa and not (user.mfa_secret or user.passkeys))
+            or ((user.mfa_secret or user.passkeys) and not session.mfa_verified)
         ):
             raise HTTPException(
                 403, "Complete account security setup before accessing the workspace"

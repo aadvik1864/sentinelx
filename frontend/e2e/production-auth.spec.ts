@@ -45,6 +45,24 @@ test("production sign-in and first-login security gates", async ({ page, browser
     await teammate.getByLabel("Password", { exact: true }).fill("Disposable-own-password-456!");
     await teammate.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(teammate.getByRole("heading", { name: "Add an authenticator" })).toBeVisible();
+    const cdp = await context.newCDPSession(teammate);
+    await cdp.send("WebAuthn.enable");
+    await cdp.send("WebAuthn.addVirtualAuthenticator", { options: {
+      protocol: "ctap2", transport: "internal", hasResidentKey: true,
+      hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true,
+    } });
+    await teammate.getByLabel("Sign-in protection").selectOption("passkey");
+    await teammate.getByLabel("Current password for passkey").fill("Disposable-own-password-456!");
+    await teammate.getByRole("button", { name: "Add passkey", exact: true }).click();
+    await expect(teammate.getByRole("heading", { name: "Passkey added" })).toBeVisible();
+    await expect(teammate.getByLabel("Recovery codes")).toBeVisible();
+    await expect(teammate.getByRole("button", { name: "Continue to sign in" })).toBeDisabled();
+    await teammate.getByLabel("I saved my recovery codes privately.").check();
+    await teammate.getByRole("button", { name: "Continue to sign in" }).click();
+    await teammate.getByLabel("Email address").fill(email);
+    await teammate.getByLabel("Password", { exact: true }).fill("Disposable-own-password-456!");
+    await teammate.getByRole("button", { name: "Sign in with passkey", exact: true }).click();
+    await expect(teammate.getByRole("heading", { name: "Your security overview" })).toBeVisible();
     expect(await teammate.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   } finally {
     await context.close();

@@ -68,9 +68,18 @@ def login(data: Login, request: Request, response: Response, db: Session = Depen
     user = db.scalar(select(User).where(User.email == email).with_for_update())
     valid = verify_password(data.password, user.password_hash if user else DUMMY_HASH)
     mfa_valid = bool(
-        user and not user.disabled and user.mfa_secret and valid and mfa.verify(user, data.otp)
+        user
+        and not user.disabled
+        and (user.mfa_secret or user.passkeys)
+        and valid
+        and mfa.verify(user, data.otp)
     )
-    if not user or user.disabled or not valid or (user.mfa_secret and not mfa_valid):
+    if (
+        not user
+        or user.disabled
+        or not valid
+        or ((user.mfa_secret or user.passkeys) and not mfa_valid)
+    ):
         audit(db, None, "LOGIN_FAILED", "auth", "login", request)
         db.commit()
         emit_activity(
@@ -120,7 +129,11 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
             request, "refresh_replay", "Refresh credential replay rejected", level="WARNING"
         )
         raise HTTPException(401, "Refresh token reuse detected. Please sign in again.")
-    if not user or user.disabled or (user.mfa_secret and not session.mfa_verified):
+    if (
+        not user
+        or user.disabled
+        or ((user.mfa_secret or user.passkeys) and not session.mfa_verified)
+    ):
         raise HTTPException(401, "Please sign in with your authenticator.")
     consumed = db.execute(
         update(RefreshSession)

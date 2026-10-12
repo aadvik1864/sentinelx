@@ -1,8 +1,71 @@
 # Prepared single-team release. Requires the base and HTTPS files, private .env,
 # operator-owned TLS, backup storage, and the deployment checklist.
 services:
-  backend:
+  database-setup:
+    image: ${COMPOSE_PROJECT_NAME:-sentinelx}-backend-production
+    build: {context: ., dockerfile: backend/Dockerfile}
+    command: [sh, -c, 'exec python -m app.database_roles --apply --confirm-database "$$POSTGRES_DATABASE"']
     environment:
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-sentinelx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Supply the private bootstrap credential}
+      POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?Generate a separate migration credential}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_RUNTIME_PASSWORD:?Generate a separate runtime credential}
+      POSTGRES_NOTIFICATION_PASSWORD: ${POSTGRES_NOTIFICATION_PASSWORD:-}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [internal]
+    restart: "no"
+    init: true
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 64
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  migrate:
+    image: ${COMPOSE_PROJECT_NAME:-sentinelx}-backend-production
+    build: {context: ., dockerfile: backend/Dockerfile}
+    command: [python, -m, app.migrate]
+    environment:
+      DATABASE_URL: postgresql+psycopg://sentinelx_migrator:${POSTGRES_MIGRATION_PASSWORD}@postgres:5432/${POSTGRES_DATABASE:-sentinelx}
+      JWT_SECRET: ${JWT_SECRET}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@sentinelx.dev}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD}
+      ENVIRONMENT: production
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      COOKIE_SECURE: "true"
+      ALLOWED_ORIGINS: ${HTTPS_ORIGIN}
+      ALLOWED_HOSTS: ${HTTPS_HOST},localhost,127.0.0.1
+      WEBAUTHN_RP_ID: ${HTTPS_HOST}
+      LLM_PROVIDER: offline
+    depends_on:
+      database-setup: {condition: service_completed_successfully}
+    networks: [internal]
+    restart: "no"
+    init: true
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  backend:
+    image: ${COMPOSE_PROJECT_NAME:-sentinelx}-backend-production
+    env_file: !reset []
+    networks: !override [internal]
+    command: [uvicorn, app.main:app, --host, 0.0.0.0, --port, "8000", --proxy-headers, "--forwarded-allow-ips=*"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    environment: !override
+      DATABASE_URL: postgresql+psycopg://sentinelx_runtime:${POSTGRES_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DATABASE:-sentinelx}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      ALLOWED_ORIGINS: ${HTTPS_ORIGIN}
+      ALLOWED_HOSTS: ${HTTPS_HOST},localhost,127.0.0.1
+      WEBAUTHN_RP_ID: ${HTTPS_HOST}
       ENVIRONMENT: production
       COOKIE_SECURE: "true"
       API_DOCS_ENABLED: "false"
@@ -10,6 +73,12 @@ services:
       SEED_DEMO: "false"
       LIVE_MONITORING: "true"
       LLM_PROVIDER: ${LLM_PROVIDER:-offline}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:1.7b}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Generate and privately back up the MFA encryption key}
     mem_limit: 1g
     cpus: 2

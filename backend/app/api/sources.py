@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import secrets
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -14,7 +15,14 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import admin_only, audit, bearer, limiter, read_security, token_digest
 from app.models import LogSource, User, utcnow
-from app.schemas import RawLog, SourceHeartbeat, SourceInput, SourcePatch, SourceRecord
+from app.schemas import (
+    RawLog,
+    SourceHeartbeat,
+    SourceInput,
+    SourcePatch,
+    SourceRecord,
+    SourceRotation,
+)
 from app.services.detection.engine import ingest
 from app.services.ingestion.normalizer import normalize
 from app.services.serialization import serialize
@@ -34,6 +42,8 @@ def source_view(source):
     result = serialize(source)
     if not source.enabled:
         status = "paused"
+    elif source.token_expires_at and source.token_expires_at <= utcnow():
+        status = "key_expired"
     elif not source.last_heartbeat_at:
         status = "not_connected"
     elif (utcnow() - source.last_heartbeat_at).total_seconds() > 90:
@@ -73,7 +83,11 @@ def create_source(
     db: Session = Depends(get_db),
 ):
     token = "sxcol_" + secrets.token_urlsafe(32)
-    source = LogSource(**data.model_dump(), token_hash=token_digest(token))
+    source = LogSource(
+        **data.model_dump(),
+        token_hash=token_digest(token),
+        token_expires_at=utcnow() + timedelta(days=90),
+    )
     db.add(source)
     db.flush()
     audit(db, user, "CREATE_LOG_SOURCE", "log_source", source.id, request)
@@ -106,13 +120,34 @@ def rotate_key(
     request: Request,
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
+    data: SourceRotation = SourceRotation(),
 ):
-    source = db.get(LogSource, source_id)
+    source = db.scalar(select(LogSource).where(LogSource.id == source_id).with_for_update())
     if not source:
         raise HTTPException(404, "Log source not found")
     token = "sxcol_" + secrets.token_urlsafe(32)
+    now = utcnow()
+    source.previous_token_hash = source.token_hash if data.overlap_seconds else None
+    source.previous_token_expires_at = (
+        (
+            min(now + timedelta(seconds=data.overlap_seconds), source.token_expires_at)
+            if source.token_expires_at
+            else now + timedelta(seconds=data.overlap_seconds)
+        )
+        if data.overlap_seconds
+        else None
+    )
     source.token_hash = token_digest(token)
-    audit(db, user, "ROTATE_COLLECTOR_KEY", "log_source", source.id, request)
+    source.token_expires_at = now + timedelta(days=data.valid_days)
+    audit(
+        db,
+        user,
+        "ROTATE_COLLECTOR_KEY",
+        "log_source",
+        source.id,
+        request,
+        {"overlap_seconds": data.overlap_seconds, "valid_days": data.valid_days},
+    )
     db.commit()
     return {"source": source_view(source), "collector_key": token}
 
@@ -124,11 +159,23 @@ def collector_source(
     db: Session = Depends(get_db),
 ):
     source = db.scalar(select(LogSource).where(LogSource.id == source_id).with_for_update())
-    if (
-        not source
-        or not credentials
-        or not hmac.compare_digest(source.token_hash, token_digest(credentials.credentials))
-    ):
+    now = utcnow()
+    digest = token_digest(credentials.credentials) if credentials else ""
+    current_valid = bool(
+        source
+        and credentials
+        and hmac.compare_digest(source.token_hash, digest)
+        and (source.token_expires_at is None or source.token_expires_at > now)
+    )
+    previous_valid = bool(
+        source
+        and credentials
+        and source.previous_token_hash
+        and source.previous_token_expires_at
+        and source.previous_token_expires_at > now
+        and hmac.compare_digest(source.previous_token_hash, digest)
+    )
+    if not source or not credentials or not (current_valid or previous_valid):
         limiter.check(
             f"invalid-collector:{request.client.host if request.client else 'unknown'}", 60
         )

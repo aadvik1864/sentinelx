@@ -15,11 +15,13 @@ from app.api import (
     demo,
     events,
     incidents,
+    passkeys,
     rules,
     settings,
     sources,
     threat_intel,
 )
+from app.core.clock import clock_guard
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.seed import bootstrap, seed_demo
@@ -32,13 +34,36 @@ config = get_settings()
 
 @asynccontextmanager
 async def lifespan(app):
-    with SessionLocal() as db:
-        bootstrap(db)
-        if config.seed_demo and config.environment == "development":
-            seed_demo(db)
-    await broker.start()
-    yield
-    await broker.stop()
+    app.state.clock_guard_enabled = config.environment == "production"
+    if config.environment == "production":
+        clock_guard.start()
+    try:
+        with SessionLocal() as db:
+            if config.environment == "production":
+                role = db.execute(
+                    text(
+                        "SELECT current_user, rolsuper, rolcreatedb, rolcreaterole, rolreplication, "
+                        "rolbypassrls, has_schema_privilege(current_user, 'public', 'CREATE'), "
+                        "has_database_privilege(current_user, current_database(), 'CREATE'), "
+                        "EXISTS(SELECT 1 FROM pg_auth_members WHERE member=pg_roles.oid) "
+                        "FROM pg_roles WHERE rolname=current_user"
+                    )
+                ).one()
+                if role[0] != "sentinelx_runtime" or any(role[1:]):
+                    raise RuntimeError(
+                        "Production API requires the isolated least-privilege runtime role"
+                    )
+            else:
+                bootstrap(db)
+            if config.seed_demo and config.environment == "development":
+                seed_demo(db)
+        await broker.start()
+        try:
+            yield
+        finally:
+            await broker.stop()
+    finally:
+        clock_guard.stop()
 
 
 app = FastAPI(
@@ -67,6 +92,20 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.hosts, www_redire
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    if (
+        getattr(app.state, "clock_guard_enabled", False)
+        and request.url.path not in {"/health/live", "/health/ready"}
+        and not clock_guard.healthy()
+    ):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Server clock requires operator review"},
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "no-referrer",
+            },
+        )
     if request.method in {"POST", "PATCH", "DELETE"}:
         if (
             request.cookies.get("sentinelx_refresh")
@@ -100,6 +139,8 @@ def live():
 
 @app.get("/health/ready", include_in_schema=False)
 def ready():
+    if getattr(app.state, "clock_guard_enabled", False) and not clock_guard.healthy():
+        return JSONResponse(status_code=503, content={"status": "clock_unstable"})
     try:
         with SessionLocal() as db:
             db.execute(text("SELECT 1"))
@@ -112,6 +153,7 @@ def ready():
 
 for module in [
     auth,
+    passkeys,
     events,
     alerts,
     incidents,

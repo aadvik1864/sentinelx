@@ -130,7 +130,7 @@ describe("guided source onboarding", () => {
     expect(mocks.post).not.toHaveBeenCalled();
     expect(screen.getByText(/old key for My site stops working immediately/)).toBeVisible();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Replace connection key" }));
-    await waitFor(() => expect(mocks.post).toHaveBeenCalledWith("/sources/7/rotate-key"));
+    await waitFor(() => expect(mocks.post).toHaveBeenCalledWith("/sources/7/rotate-key", { overlap_seconds: 0 }));
   });
 
   it("lets investigators view connection instructions without managing collection", () => {

@@ -1,0 +1,24 @@
+# Deliberate opt-in only. The API remains on the internal network; only this proxy has egress.
+services:
+  backend:
+    environment:
+      EGRESS_PROXY_URL: http://sentinelx:${EGRESS_PROXY_PASSWORD:?Generate an independent proxy secret}@egress-proxy:8081
+      EXTERNAL_ALLOWED_HOSTS: ${EGRESS_ALLOWED_HOSTS:?Explicitly approve exact provider hosts}
+  egress-proxy:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    command: [python, -m, app.egress_proxy]
+    environment:
+      EGRESS_PROXY_PASSWORD: ${EGRESS_PROXY_PASSWORD}
+      EGRESS_ALLOWED_HOSTS: ${EGRESS_ALLOWED_HOSTS}
+    networks: [internal, egress]
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 64
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

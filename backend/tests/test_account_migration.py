@@ -46,10 +46,16 @@ def test_populated_upgrade_preserves_accounts_and_receipts(tmp_path):
             "test-only-preserved-token-hash",
             1,
         )
+        assert db.execute(
+            "SELECT token_expires_at,previous_token_hash,previous_token_expires_at FROM log_sources"
+        ).fetchone() == (None, None, None)
+        assert db.execute("SELECT mfa_webauthn_handle FROM users").fetchone() == (None,)
+        assert db.execute("SELECT count(*) FROM notification_outbox").fetchone() == (0,)
+        assert db.execute("SELECT count(*) FROM webauthn_credentials").fetchone() == (0,)
         assert db.execute("SELECT event_id,record_key FROM source_receipts").fetchone() == (
             31,
             "preserved-record",
         )
         assert db.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0005_receipt_tombstones",
+            "0008_receipt_metrics",
         )

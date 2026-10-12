@@ -1,12 +1,8 @@
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
+from app.core.base import Base as Base  # re-exported for migrations and existing callers
 from app.core.config import get_settings
-
-
-class Base(DeclarativeBase):
-    pass
-
 
 settings = get_settings()
 engine = create_engine(

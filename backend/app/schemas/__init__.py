@@ -107,6 +107,11 @@ class SourcePatch(StrictModel):
     enabled: bool
 
 
+class SourceRotation(StrictModel):
+    valid_days: int = Field(default=90, ge=1, le=365)
+    overlap_seconds: int = Field(default=0, ge=0, le=600)
+
+
 class SourceRecord(StrictModel):
     record_key: str = Field(min_length=16, max_length=128, pattern=r"^[a-zA-Z0-9_:.-]+$")
     line: str = Field(min_length=1, max_length=20000)
