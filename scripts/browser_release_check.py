@@ -8,6 +8,21 @@ import tempfile
 from pathlib import Path
 
 
+def private_browser_check(command, *, frontend, environment, directory):
+    # Assertion diagnostics can include visible recovery codes/DOM content. Never stream them to CI.
+    with tempfile.NamedTemporaryFile(
+        prefix="browser-check-", suffix=".log", dir=directory, delete=False
+    ) as log:
+        result = subprocess.run(
+            command, cwd=frontend, env=environment, stdout=log, stderr=subprocess.STDOUT
+        )
+    if result.returncode:
+        raise SystemExit(
+            "Production browser check failed; diagnostics are private fixture artifacts"
+        )
+    print("Trusted-CA production browser/passkey check passed")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact-dir", type=Path, required=True)
@@ -62,15 +77,15 @@ def main():
         ),
     }
     frontend = Path(__file__).resolve().parents[1] / "frontend"
-    subprocess.run(
+    private_browser_check(
         [
             str(frontend / "node_modules/.bin/playwright"),
             "test",
             "e2e/production-auth.spec.ts",
         ],
-        cwd=frontend,
-        env=environment,
-        check=True,
+        frontend=frontend,
+        environment=environment,
+        directory=args.artifact_dir,
     )
 
 

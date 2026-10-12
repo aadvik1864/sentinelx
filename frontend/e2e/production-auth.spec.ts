@@ -55,7 +55,7 @@ test("production sign-in and first-login security gates", async ({ page, browser
     await teammate.getByLabel("Current password for passkey").fill("Disposable-own-password-456!");
     await teammate.getByRole("button", { name: "Add passkey", exact: true }).click();
     await expect(teammate.getByRole("heading", { name: "Passkey added" })).toBeVisible();
-    await expect(teammate.getByLabel("Recovery codes")).toBeVisible();
+    await expect(teammate.getByLabel("Recovery codes", { exact: true })).toBeVisible();
     await expect(teammate.getByRole("button", { name: "Continue to sign in" })).toBeDisabled();
     await teammate.getByLabel("I saved my recovery codes privately.").check();
     await teammate.getByRole("button", { name: "Continue to sign in" }).click();
