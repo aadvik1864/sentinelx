@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select, tuple_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -9,6 +9,118 @@ from app.core.security import current_user
 from app.models import Alert, Asset, Event, Incident, User, utcnow
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+def daily_event_metrics(db: Session, since):
+    if db.bind.dialect.name == "postgresql":
+        bucket = func.date_trunc("hour", Event.timestamp)
+        # One retained-history scan supplies the chart, address/type groups and total.
+        # GROUPING flags distinguish a real null source address from a rolled-up row.
+        groups = (
+            select(
+                bucket.label("hour"),
+                Event.source_ip.label("ip"),
+                Event.event_type.label("kind"),
+                func.count().label("amount"),
+                func.grouping(bucket).label("omit_hour"),
+                func.grouping(Event.source_ip).label("omit_ip"),
+                func.grouping(Event.event_type).label("omit_kind"),
+            )
+            .where(Event.timestamp >= since)
+            .group_by(
+                func.grouping_sets(
+                    tuple_(bucket), tuple_(Event.source_ip), tuple_(Event.event_type), tuple_()
+                )
+            )
+            .cte("daily_groups")
+        )
+        categories = (groups.c.omit_hour, groups.c.omit_ip, groups.c.omit_kind)
+        ranked = select(
+            groups,
+            func.row_number()
+            .over(
+                partition_by=categories,
+                # Real null-address groups must not consume a top-five address slot.
+                order_by=(
+                    groups.c.ip.is_(None),
+                    groups.c.amount.desc(),
+                    groups.c.ip,
+                    groups.c.kind,
+                ),
+            )
+            .label("position"),
+            func.count()
+            .filter(groups.c.ip.is_not(None))
+            .over(partition_by=categories)
+            .label("unique_ips"),
+        ).cte("ranked_groups")
+        rows = db.execute(
+            select(
+                ranked.c.hour,
+                ranked.c.ip,
+                ranked.c.kind,
+                ranked.c.amount,
+                ranked.c.omit_hour,
+                ranked.c.omit_ip,
+                ranked.c.omit_kind,
+                ranked.c.unique_ips,
+            ).where(
+                or_(
+                    ranked.c.omit_hour == 0,
+                    and_(ranked.c.omit_hour == 1, ranked.c.omit_ip == 1, ranked.c.omit_kind == 1),
+                    and_(
+                        ranked.c.position <= 5,
+                        or_(
+                            ranked.c.omit_kind == 0,
+                            and_(ranked.c.omit_ip == 0, ranked.c.ip.is_not(None)),
+                        ),
+                    ),
+                )
+            )
+        ).all()
+        total, unique_ips, counts, ips, types = 0, 0, {}, {}, {}
+        for hour, ip, kind, amount, omit_hour, omit_ip, omit_kind, ip_count in rows:
+            if not omit_hour:
+                counts[str(hour)[:13]] = amount
+            elif not omit_ip:
+                if ip is not None:
+                    ips[ip] = amount
+                    unique_ips = ip_count
+            elif not omit_kind:
+                types[kind] = amount
+            else:
+                total = amount
+        top_ips = sorted(ips.items(), key=lambda row: (-row[1], row[0]))[:5]
+        top_types = sorted(types.items(), key=lambda row: (-row[1], row[0]))[:5]
+        return total, unique_ips, counts, top_ips, top_types
+
+    bucket = func.strftime("%Y-%m-%d %H:00:00", Event.timestamp)
+    rows = db.execute(
+        select(bucket, func.count())
+        .where(Event.timestamp >= since)
+        .group_by(bucket)
+        .order_by(bucket)
+    ).all()
+    counts = {str(time)[:13]: total for time, total in rows}
+    top_ips = db.execute(
+        select(Event.source_ip, func.count())
+        .where(Event.timestamp >= since, Event.source_ip.is_not(None))
+        .group_by(Event.source_ip)
+        .order_by(func.count().desc(), Event.source_ip)
+        .limit(5)
+    ).all()
+    types = db.execute(
+        select(Event.event_type, func.count())
+        .where(Event.timestamp >= since)
+        .group_by(Event.event_type)
+        .order_by(func.count().desc(), Event.event_type)
+        .limit(5)
+    ).all()
+    total = db.scalar(select(func.count()).select_from(Event).where(Event.timestamp >= since))
+    unique_ips = db.scalar(
+        select(func.count(func.distinct(Event.source_ip))).where(Event.timestamp >= since)
+    )
+    return total, unique_ips, counts, top_ips, types
 
 
 @router.get("")
@@ -25,17 +137,7 @@ def dashboard(user: User = Depends(current_user), db: Session = Depends(get_db))
             select(Alert.severity, func.count()).where(active).group_by(Alert.severity)
         ).all()
     )
-    if db.bind.dialect.name == "postgresql":
-        bucket = func.date_trunc("hour", Event.timestamp)
-    else:
-        bucket = func.strftime("%Y-%m-%d %H:00:00", Event.timestamp)
-    rows = db.execute(
-        select(bucket, func.count())
-        .where(Event.timestamp >= since)
-        .group_by(bucket)
-        .order_by(bucket)
-    ).all()
-    counts = {str(time)[:13]: total for time, total in rows}
+    total_events, unique_ips, counts, top_ips, types = daily_event_metrics(db, since)
     activity = []
     # A rolling 24-hour interval can span 25 clock-hour buckets (two partial endpoints).
     for hour in range(25):
@@ -43,22 +145,8 @@ def dashboard(user: User = Depends(current_user), db: Session = Depends(get_db))
         activity.append(
             {"timestamp": time.isoformat() + "Z", "events": counts.get(str(time)[:13], 0)}
         )
-    top_ips = db.execute(
-        select(Event.source_ip, func.count())
-        .where(Event.timestamp >= since, Event.source_ip.is_not(None))
-        .group_by(Event.source_ip)
-        .order_by(func.count().desc())
-        .limit(5)
-    ).all()
-    types = db.execute(
-        select(Event.event_type, func.count())
-        .where(Event.timestamp >= since)
-        .group_by(Event.event_type)
-        .order_by(func.count().desc())
-        .limit(5)
-    ).all()
     return {
-        "total_events": count(Event, Event.timestamp >= since),
+        "total_events": total_events,
         "events_per_second": round(
             count(Event, Event.created_at >= now - timedelta(minutes=1)) / 60, 2
         ),
@@ -67,9 +155,7 @@ def dashboard(user: User = Depends(current_user), db: Session = Depends(get_db))
         "open_incidents": count(Incident, Incident.status != "resolved"),
         "resolved_incidents": count(Incident, Incident.status == "resolved"),
         "monitored_assets": count(Asset, Asset.status == "active"),
-        "unique_source_ips": db.scalar(
-            select(func.count(func.distinct(Event.source_ip))).where(Event.timestamp >= since)
-        ),
+        "unique_source_ips": unique_ips,
         "severity_counts": {
             key: severity.get(key, 0) for key in ["critical", "high", "medium", "low"]
         },

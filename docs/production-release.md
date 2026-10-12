@@ -67,6 +67,12 @@ These are bounded checks on a shared Linux Docker host, not production approval.
 
 Failed results must remain part of the review even if later sequential trials pass. Revalidate with reliable clocks, reserved capacity, representative history, and a sustained soak before approving deployment.
 
+### First clean-runner candidate check
+
+[GitHub run 38164648843](https://github.com/aadvik1864/sentinelx/actions/runs/38164648843) checked candidate `d58da2432b251e663a131fb644e600d3ba7e91c3`: SQLite passed 136 tests with seven PostgreSQL-only skips; PostgreSQL passed 143 tests, and the 20 release-tool tests passed in both jobs. Both monitored clocks were stable; the frontend and development browser workflow also passed.
+
+The one-day/ten-minute fixture acknowledged all 6,000 new records at 10.001 EPS, ingestion p95 0.0362 seconds and maximum 0.7881 seconds. Dashboard p95 was **1.3646 seconds**, exceeding the unchanged 1-second acceptance gate; therefore that run failed before recovery, scanning and production-browser follow-ups. The PostgreSQL dashboard query now combines daily totals, hourly buckets and address/type groups in one history scan, with database-side top-five ranking so high-cardinality groups do not become unbounded application-memory results. The candidate must pass the same capacity gate after this change before publication to `main`.
+
 ## Backups and recovery
 
 Install age from a trusted source. Use an approved public recipient; keep the matching private identity offline, mode 0600. Example commands use placeholders, not real credentials:

@@ -13,6 +13,7 @@ Keep the completed record and evidence in separately controlled private storage,
 | Hosting and TLS | A separate approved target, hostname/origin, private service networks, trusted certificate, renewal procedure and tested expiry alert | Pending |
 | Time | Maintained clock synchronization; no backward steps during acceptance; a tested skew alert and a runbook for rejecting affected test results | Pending |
 | Secrets | Secret-manager delivery, unique credentials, encrypted storage, reviewed permissions, separately recoverable MFA key and private recovery custody | Pending |
+| Database privilege | Reviewed bootstrap/migration/runtime role separation and grants; the bundled `POSTGRES_USER` application connection is a PostgreSQL administrator, not a least-privilege runtime role | Pending |
 | People | Verified membership, least-privilege roles, private starter-password delivery, MFA enrollment, recovery identity checks and tested offboarding | Pending |
 | Recovery | Approved off-host destination and age recipient; separately stored identity/config/MFA/collector checkpoints; schedule, RPO/RTO and a measured off-host restore drill | Pending |
 | Retention | Approved raw-log period/legal holds, projected storage and protected evidence/receipt/audit lifecycle; review the dry-run before scheduling any write | Pending |
