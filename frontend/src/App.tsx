@@ -1,23 +1,50 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { Empty, Loading } from "./components/ui";
-import { AccountSecuritySetup, SecurityEnrollmentComplete } from "./components/AccountSecurity";
+import {
+  AccountSecuritySetup,
+  SecurityEnrollmentComplete,
+} from "./components/AccountSecurity";
 import { ConsoleLayout } from "./layouts/ConsoleLayout";
 import { LoginPage } from "./pages/Login";
 import { useAuth } from "./store/AuthContext";
 import { LiveProvider } from "./store/LiveContext";
 
-const AlertsPage = lazy(() => import("./pages/Alerts").then((module) => ({ default: module.AlertsPage })));
-const AssetsPage = lazy(() => import("./pages/Assets").then((module) => ({ default: module.AssetsPage })));
-const AssistantPage = lazy(() => import("./pages/Assistant").then((module) => ({ default: module.AssistantPage })));
-const DashboardPage = lazy(() => import("./pages/Dashboard").then((module) => ({ default: module.DashboardPage })));
-const EventsPage = lazy(() => import("./pages/Events").then((module) => ({ default: module.EventsPage })));
-const IncidentsPage = lazy(() => import("./pages/Incidents").then((module) => ({ default: module.IncidentsPage })));
-const IncidentDetailPage = lazy(() => import("./pages/Incidents").then((module) => ({ default: module.IncidentDetailPage })));
-const RulesPage = lazy(() => import("./pages/Rules").then((module) => ({ default: module.RulesPage })));
-const SettingsPage = lazy(() => import("./pages/Settings").then((module) => ({ default: module.SettingsPage })));
-const SourcesPage = lazy(() => import("./pages/Sources").then((module) => ({ default: module.SourcesPage })));
-const ThreatIntelligencePage = lazy(() => import("./pages/ThreatIntelligence").then((module) => ({ default: module.ThreatIntelligencePage })));
+const AlertsPage = lazy(() =>
+  import("./pages/Alerts").then((module) => ({ default: module.AlertsPage })),
+);
+const AssetsPage = lazy(() =>
+  import("./pages/Assets").then((module) => ({ default: module.AssetsPage })),
+);
+const AssistantPage = lazy(() =>
+  import("./pages/Assistant").then((module) => ({ default: module.AssistantPage })),
+);
+const DashboardPage = lazy(() =>
+  import("./pages/Dashboard").then((module) => ({ default: module.DashboardPage })),
+);
+const EventsPage = lazy(() =>
+  import("./pages/Events").then((module) => ({ default: module.EventsPage })),
+);
+const IncidentsPage = lazy(() =>
+  import("./pages/Incidents").then((module) => ({ default: module.IncidentsPage })),
+);
+const IncidentDetailPage = lazy(() =>
+  import("./pages/Incidents").then((module) => ({ default: module.IncidentDetailPage })),
+);
+const RulesPage = lazy(() =>
+  import("./pages/Rules").then((module) => ({ default: module.RulesPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./pages/Settings").then((module) => ({ default: module.SettingsPage })),
+);
+const SourcesPage = lazy(() =>
+  import("./pages/Sources").then((module) => ({ default: module.SourcesPage })),
+);
+const ThreatIntelligencePage = lazy(() =>
+  import("./pages/ThreatIntelligence").then((module) => ({
+    default: module.ThreatIntelligencePage,
+  })),
+);
 
 function Protected() {
   const { user, loading } = useAuth();
@@ -36,6 +63,7 @@ function Protected() {
     </LiveProvider>
   );
 }
+
 function InvestigatorOnly() {
   const { user } = useAuth();
   return user?.role === "VIEWER" ? (
@@ -44,6 +72,7 @@ function InvestigatorOnly() {
     <Outlet />
   );
 }
+
 export default function App() {
   const { securityCompletion } = useAuth();
   if (securityCompletion) return <SecurityEnrollmentComplete />;

@@ -8,22 +8,33 @@ import {
 } from "../services/api";
 import type { Session, User } from "../types";
 
+interface EnrollmentCompletion {
+  method: "totp" | "passkey";
+  recoveryCodes: string[];
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string, otp?: string) => Promise<void>;
   logout: () => Promise<void>;
-  securityCompletion: { method: "totp" | "passkey"; recoveryCodes: string[] } | null;
-  completeEnrollment: (method: "totp" | "passkey", recoveryCodes: string[]) => void;
+  securityCompletion: EnrollmentCompletion | null;
+  completeEnrollment: (
+    method: EnrollmentCompletion["method"],
+    recoveryCodes: string[],
+  ) => void;
   acknowledgeEnrollment: () => void;
 }
+
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [securityCompletion, setSecurityCompletion] = useState<AuthState["securityCompletion"]>(null);
+  const [securityCompletion, setSecurityCompletion] =
+    useState<EnrollmentCompletion | null>(null);
+
   useEffect(() => {
     onSessionChange(setSession);
     refreshSession()
@@ -31,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
     return () => onSessionChange(null);
   }, []);
+
   useEffect(() => {
     if (!session) return;
     const timer = window.setInterval(
@@ -41,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     return () => window.clearInterval(timer);
   }, [session]);
+
   async function login(email: string, password: string, otp?: string) {
     const { data } = await api.post<Session>("/auth/login", {
       email,
@@ -49,19 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     applySession(data);
   }
+
   async function logout() {
     await api.post("/auth/logout");
     applySession(null);
   }
-  function completeEnrollment(method: "totp" | "passkey", recoveryCodes: string[]) {
+
+  function completeEnrollment(
+    method: EnrollmentCompletion["method"],
+    recoveryCodes: string[],
+  ) {
     // Keep one-time codes outside the revoked session's route tree, in memory only.
     setSecurityCompletion({ method, recoveryCodes: [...recoveryCodes] });
     applySession(null);
   }
+
   function acknowledgeEnrollment() {
     setSecurityCompletion(null);
     applySession(null);
   }
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error("AuthProvider is required");
