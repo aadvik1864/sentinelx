@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:showcase": "tsc -b && vite build --mode showcase",
+    "preview:showcase": "vite preview --mode showcase --host 127.0.0.1",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:showcase": "playwright test --config showcase/playwright.config.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.5",
@@ -34,6 +37,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
+    "@types/node": "^22.15.0",
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^9.25.1",
     "eslint-plugin-react-hooks": "^5.2.0",

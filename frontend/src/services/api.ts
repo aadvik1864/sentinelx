@@ -13,9 +13,6 @@ let accessToken: string | null = null;
 let listener: ((session: Session | null) => void) | null = null;
 let refreshing: Promise<Session> | null = null;
 
-export function getAccessToken() {
-  return accessToken;
-}
 export function onSessionChange(callback: typeof listener) {
   listener = callback;
 }

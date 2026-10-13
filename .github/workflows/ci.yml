@@ -50,6 +50,11 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Build the isolated static showcase
+        run: npm run build:showcase
+      - run: npx playwright install --with-deps chromium
+      - name: Showcase browser and network-isolation checks
+        run: npm run test:showcase
       - run: npm audit --audit-level=high
 
   container-smoke:

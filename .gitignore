@@ -28,7 +28,6 @@ test-results/
 /docs/security-review.md
 /docs/demo.webm
 /docs/screenshots/*
-!/docs/screenshots/.gitkeep
 !/docs/screenshots/overview-practice.png
 !/docs/screenshots/overview-mobile.png
 !/docs/screenshots/plain-language-investigation.png
@@ -39,3 +38,4 @@ test-results/
 *.dump
 *.backup.sql
 *.agekey
+dist-showcase/

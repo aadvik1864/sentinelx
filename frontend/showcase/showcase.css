@@ -1,0 +1,32 @@
+.showcase .topbar {
+  height: auto;
+  min-height: 72px;
+  gap: 12px;
+}
+.showcase .topbar-left {
+  flex-wrap: wrap;
+}
+.showcase .workspace-mode {
+  display: inline-flex;
+}
+.showcase-caption {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 16px 12px;
+}
+.showcase .practice-notice {
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .showcase .topbar {
+    flex-wrap: wrap;
+    padding-block: 12px;
+  }
+  .showcase .topbar-left,
+  .showcase .topbar-actions {
+    width: 100%;
+  }
+  .showcase .topbar-actions {
+    justify-content: flex-end;
+  }
+}

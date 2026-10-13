@@ -104,6 +104,7 @@ function AlertDetails({ id, close }: { id: number; close: () => void }) {
               <label className="standalone-label">
                 Alert status
                 <select
+                  aria-label="Alert status"
                   value={alert.status}
                   disabled={busy}
                   onChange={(event) => update(event.target.value)}
@@ -122,7 +123,7 @@ function AlertDetails({ id, close }: { id: number; close: () => void }) {
                 to={`/incidents/${alert.incident_id}`}
                 onClick={close}
               >
-                <FileIcon />
+                <Bell size={20} />
                 <span>
                   Open related investigation
                   <strong>
@@ -178,10 +179,6 @@ function AlertDetails({ id, close }: { id: number; close: () => void }) {
     </Modal>
   );
 }
-function FileIcon() {
-  return <Bell size={20} />;
-}
-
 export function AlertsPage() {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");

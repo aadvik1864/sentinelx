@@ -12,3 +12,4 @@ SentinelX is a security monitoring prototype with a web dashboard for reviewing 
 - Optional assistant that explains evidence and suggests investigation steps without executing actions.
 - Administrator, investigator, and read-only access, with two-step sign-in, passkeys, and account security setup.
 - Responsive graphite-and-copper interface with keyboard navigation and reduced-motion support.
+- Browser-only interactive showcase with fictional activity and resettable investigation practice.

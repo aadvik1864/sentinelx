@@ -36,4 +36,4 @@ The sidebar's **How to use SentinelX** guide explains the workflow without requi
 
 Public previews: [overview](screenshots/overview-practice.png), [mobile overview](screenshots/overview-mobile.png), [investigation](screenshots/plain-language-investigation.png), and [sign-in](screenshots/login.png). Overview/investigation previews use browser-only practice data, not live records. Installation-specific captures and the older recording remain local and are excluded from Git.
 
-For an interactive internet-facing portfolio demo, see the [public showcase plan](showcase.md). It keeps synthetic presentation separate from the authenticated monitoring application; no public demo build or hosting is implied by these previews.
+The [interactive showcase](showcase.md) reuses these pages in a separate static build with fictional records and tab-local practice edits. It includes no monitoring session, backend client or live sockets. Hosting is a separate choice; the existing installation is not exposed by building it.

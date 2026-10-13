@@ -663,6 +663,7 @@ export function IncidentDetailPage() {
                       <label>
                         Status
                         <select
+                          aria-label="Investigation status"
                           value={incident.status}
                           disabled={busy}
                           onChange={(event) => {

@@ -164,7 +164,7 @@ function IngestForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function EventsPage() {
+export function EventsPage({ allowImport = true }: { allowImport?: boolean }) {
   const [params] = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [severity, setSeverity] = useState("");
@@ -396,7 +396,15 @@ export function EventsPage() {
           <details className="disclosure"><summary>Technical record (JSON)</summary><pre className="json-block">{JSON.stringify(selected, null, 2)}</pre></details>
         </Modal>
       )}
-      <details className="disclosure"><summary>Advanced: import a record manually</summary><p>For people who already have a record to import. This is not a way to connect a system for ongoing monitoring.</p><button className="button secondary" onClick={() => setIngesting(true)}><Plus size={16} />Import record</button></details>
+      {allowImport && (
+        <details className="disclosure">
+          <summary>Advanced: import a record manually</summary>
+          <p>For people who already have a record to import. This is not a way to connect a system for ongoing monitoring.</p>
+          <button className="button secondary" onClick={() => setIngesting(true)}>
+            <Plus size={16} />Import record
+          </button>
+        </details>
+      )}
       {ingesting && (
         <Modal
           title="Import an activity record"
