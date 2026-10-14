@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
 import { reconcile, refreshSession } from "../services/api";
+import { websocketUrl } from "../services/connection";
 
 const LiveContext = createContext(false);
 export function LiveProvider({ children }: { children: ReactNode }) {
@@ -19,9 +20,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         : ["events", "alerts", "incidents"];
     function connect(channel: string, attempt = 0) {
       if (disposed) return;
-      const socket = new WebSocket(
-        `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/${channel}`,
-      );
+      const socket = new WebSocket(websocketUrl(channel));
       sockets.push(socket);
       socket.onopen = () => socket.send(JSON.stringify({ token }));
       socket.onmessage = (event) => {

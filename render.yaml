@@ -1,0 +1,66 @@
+# Proposed plans. Apply only after the backend hosting cost is approved.
+# The Vercel frontend is deployed separately from frontend/.
+previews:
+  generation: "off"
+services:
+  - type: web
+    name: sentinelx-api
+    runtime: docker
+    repo: https://github.com/aadvik1864/sentinelx
+    branch: main
+    region: singapore
+    plan: free
+    dockerContext: .
+    dockerfilePath: backend/Dockerfile
+    dockerCommand: python -m app.cloud_runtime
+    autoDeployTrigger: "off"
+    healthCheckPath: /health/ready
+    maxShutdownDelaySeconds: 45
+    envVars:
+      - key: DATABASE_HOST
+        fromDatabase: {name: sentinelx-postgres, property: host}
+      - key: DATABASE_PORT
+        fromDatabase: {name: sentinelx-postgres, property: port}
+      - key: DATABASE_NAME
+        fromDatabase: {name: sentinelx-postgres, property: database}
+      - key: POSTGRES_RUNTIME_PASSWORD
+        sync: false
+      - key: REDIS_URL
+        fromService: {type: keyvalue, name: sentinelx-redis, property: connectionString}
+      - key: JWT_SECRET
+        sync: false
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: WEBAUTHN_RP_ID
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: API_DOCS_ENABLED
+        value: "false"
+      - key: DEMO_MODE
+        value: "false"
+      - key: SEED_DEMO
+        value: "false"
+      - key: LIVE_MONITORING
+        value: "true"
+      - key: LLM_PROVIDER
+        value: offline
+  - type: keyvalue
+    name: sentinelx-redis
+    region: singapore
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+databases:
+  - name: sentinelx-postgres
+    region: singapore
+    plan: free
+    databaseName: sentinelx
+    user: sentinelx_owner
+    postgresMajorVersion: "17"
