@@ -5,20 +5,30 @@ Render API. Refresh cookies remain Secure, HttpOnly, SameSite=Strict cookies on
 the frontend origin. Live updates connect directly to the API's WSS endpoint;
 `VITE_BACKEND_ORIGIN` is the public HTTPS backend origin, never a credential.
 
-The Render API uses PostgreSQL and Redis in Singapore. The Blueprint defaults to
-free plans. My Workspace already uses its one free PostgreSQL and Key Value
-slots for Paperloom, so deploying a separate SentinelX stack there requires
-approval for paid datastore plans. An always-on API also requires a paid plan.
-Keep the existing Paperloom services and the local SentinelX installation intact.
+The Render API uses externally hosted Neon PostgreSQL and Upstash Redis in
+Singapore. All three are explicitly on free plans. The existing Paperloom
+services and the local SentinelX installation remain separate.
+
+Neon's free quota is currently 1 GB of storage and 100 CU-hours per month per
+project. Upstash's free quota is currently 256 MB and 500,000 commands per month;
+automatic paid upgrades are disabled. The Render API sleeps after 15 idle
+minutes and shares the workspace's 750 free service-hours per calendar month.
+These limits suit intermittent small deployments, not guaranteed continuous
+monitoring. Quotas may change; check the providers' current pricing pages.
+
+The created service uses Render's default TCP health checks, which do not query
+either external datastore. The reference Blueprint uses `/health/live`, and
+deployment verification checks `/health/ready` manually. This avoids
+using database compute and Redis commands for every automatic health probe.
 
 ## Deployment sequence
 
-1. Approve the proposed backend plans. For the existing workspace, select
-   PostgreSQL `0.1c-256mb`, Key Value `256mb`, and either a free API or
-   `0.5c-512mb` for an always-on API. Set database storage to 1 GB initially.
-2. Commit and push the cloud deployment code and `render.yaml` to the existing
-   GitHub repository. Apply the Blueprint only once; do not create duplicate
-   resources through both a Blueprint and direct creation.
+1. Provision Neon `free_v3` and Upstash `free` through the Vercel Marketplace,
+   disabling Upstash auto-upgrade. The provider terms require acceptance by
+   the account owner.
+2. Commit and push the cloud deployment code to the existing GitHub repository.
+   Create only the free Render API through MCP. `render.yaml` is a reference
+   for reproducing that service; do not apply a duplicate Blueprint.
 3. Generate separate JWT, Fernet MFA, database-migration and runtime secrets.
    Save them in a private ignored deployment directory outside hosted artifacts.
 4. Initialize only the newly created dedicated database from a local one-shot
@@ -85,3 +95,20 @@ the existing controlled-egress arrangement before activation.
   seeding, and runtime checks denying schema creation and event deletion.
 
 Hosted checks remain pending resource creation and deployment.
+
+## Current deployment
+
+- Frontend: https://sentinelx-fawn.vercel.app
+- Backend: https://sentinelx-api-mn68.onrender.com
+- Render service: `srv-db7eo5m7bikc73ak6v80`, free plan, Singapore.
+- Neon project: `long-butterfly-04047585`, free plan, Singapore.
+- Upstash database: `cbe4d499-baea-4689-bfdd-22d8d26391ee`, free plan, Singapore.
+- Application/provider credentials are kept in the private ignored
+  `.release/cloud/` directory. Owner credentials are not supplied to the API.
+- Automatic Git deployments are disabled for the API. Future database migrations
+  must run separately before manually redeploying it.
+
+Hosted verification passed readiness through the proxy and directly on the API,
+browser sign-in, Secure/HttpOnly/SameSite=Strict refresh cookies, account-setup
+gating, session refresh, logout, and mobile layout. Authenticated live updates
+become available after the administrator completes their password/MFA setup.

@@ -183,10 +183,12 @@ export function LoginPage() {
               SentinelX never changes your systems automatically.
             </span>
           </div>
-          <p className="dev-credential-hint">
-            Local setup: use the administrator email and generated password from
-            your <code>.env</code> file.
-          </p>
+          {import.meta.env.DEV && (
+            <p className="dev-credential-hint">
+              Local setup: use the administrator email and generated password from
+              your <code>.env</code> file.
+            </p>
+          )}
         </div>
       </section>
     </div>
