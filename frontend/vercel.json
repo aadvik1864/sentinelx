@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "git": {
+    "deploymentEnabled": true
+  },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
@@ -64,8 +67,5 @@
         }
       ]
     }
-  ],
-  "git": {
-    "deploymentEnabled": true
-  }
+  ]
 }

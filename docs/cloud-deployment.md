@@ -94,7 +94,7 @@ the existing controlled-egress arrangement before activation.
   role provisioning, all migrations, administrator first-login gating, no demo
   seeding, and runtime checks denying schema creation and event deletion.
 
-Hosted checks remain pending resource creation and deployment.
+Hosted checks are recorded in the current deployment section below.
 
 ## Current deployment
 

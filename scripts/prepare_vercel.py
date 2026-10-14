@@ -35,6 +35,7 @@ def main():
     config = {
         "$schema": "https://openapi.vercel.sh/vercel.json",
         "framework": "vite",
+        "git": {"deploymentEnabled": True},
         "buildCommand": "npm run build",
         "outputDirectory": "dist",
         "rewrites": [
