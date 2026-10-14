@@ -6,8 +6,8 @@ the frontend origin. Live updates connect directly to the API's WSS endpoint;
 `VITE_BACKEND_ORIGIN` is the public HTTPS backend origin, never a credential.
 
 The Render API uses externally hosted Neon PostgreSQL and Upstash Redis in
-Singapore. All three are explicitly on free plans. The existing Paperloom
-services and the local SentinelX installation remain separate.
+Singapore. All three are explicitly on free plans. The hosted application has
+its own services and databases, separate from the local SentinelX installation.
 
 Neon's free quota is currently 1 GB of storage and 100 CU-hours per month per
 project. Upstash's free quota is currently 256 MB and 500,000 commands per month;
@@ -108,6 +108,9 @@ Hosted checks are recorded in the current deployment section below.
 - Vercel and Render automatically deploy pushes to `main` from
   `aadvik1864/sentinelx`. Vercel builds from `frontend/`; Render builds
   `backend/Dockerfile` with the repository root as its Docker context.
+- Both Git integrations were verified with a push: Vercel reported a Git
+  production deployment as READY, and Render reported a new-commit deployment
+  as live for the same commit.
 - Database migrations still run separately with the migrator identity before
   pushing backend changes that require a new schema.
 

@@ -1,5 +1,7 @@
 # Deployment
 
+For the hosted Vercel/Render application, use the [cloud deployment guide](cloud-deployment.md). The Compose instructions below describe a separate local installation.
+
 ## Development Compose
 
 ```bash
@@ -60,7 +62,7 @@ Use all three Compose files for subsequent backend/gateway operations; the base 
 5. Review existing accounts and admit only verified trusted people. Production MFA gates apply to existing accounts as well. This is a shared workspace, not customer isolation; email ownership is not automatically verified.
 6. Enable optional integrations only after reviewing lawful log handling, provider permissions, retention, egress, and costs.
 
-Do not assume changing the environment flag configures TLS, firewall rules, cloud secrets, monitoring, or storage encryption. CI validates/builds locally; it does not deploy to a cloud account.
+Do not assume changing the environment flag configures TLS, firewall rules, cloud secrets, monitoring, or storage encryption. The main CI workflow validates/builds the application; the hosted Vercel and Render Git integrations deploy `main`, and the separate Pages workflow publishes only the synthetic showcase. See the [cloud deployment guide](cloud-deployment.md).
 
 ## Prepared production release
 
