@@ -62,7 +62,7 @@ def normalize(raw: RawLog) -> EventInput:
             path = str(data.get("path", "/")).split("?", 1)[0][:2048]
             base.update(
                 timestamp=raw.timestamp or data.get("timestamp", timestamp),
-                message=f"{method} {path} — HTTP {status}",
+                message=f"{method} {path}: HTTP {status}",
                 metadata={"http_status": status, "path": path, "method": method},
             )
             return EventInput(
@@ -80,7 +80,7 @@ def normalize(raw: RawLog) -> EventInput:
         )
         path = match["path"].split("?", 1)[0][:2048]
         base["metadata"] = {"http_status": status, "path": path, "method": match["method"]}
-        base["message"] = f"{match['method']} {path} — HTTP {status}"
+        base["message"] = f"{match['method']} {path}: HTTP {status}"
         return EventInput(
             **base,
             source_ip=match["ip"],

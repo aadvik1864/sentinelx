@@ -61,7 +61,7 @@ def record_request(request: Request, status: int):
     emit_activity(
         request,
         "application_error" if status >= 500 else "application_request",
-        f"{request.method} {path} — HTTP {status}",
+        f"{request.method} {path}: HTTP {status}",
         http_status=status,
         method=request.method,
         path=path,

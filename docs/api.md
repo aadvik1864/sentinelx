@@ -119,6 +119,6 @@ AI responses include summary, likely_attack, evidence, affected_assets, mitre_te
 
 Connect to `/ws/events`, `/ws/alerts`, or `/ws/incidents` from an approved origin. Send `{ "token": "<access token>" }` as the first frame within 10 seconds. Tokens are never query parameters. Events require an analyst/admin role; alert/incident streams allow viewers.
 
-Server messages: `connected`, `heartbeat`, `new_event`, `new_alert`, `updated_alert`, `new_incident`, `updated_incident`, `reconcile`. Payloads use `{ "type": "new_alert", "data": { … } }`. Revalidate the session on each broadcast/20-second heartbeat. After reconnect, fetch REST state—there is no replay cursor.
+Server messages: `connected`, `heartbeat`, `new_event`, `new_alert`, `updated_alert`, `new_incident`, `updated_incident`, `reconcile`. Payloads use `{ "type": "new_alert", "data": { … } }`. Revalidate the session on each broadcast/20-second heartbeat. After reconnect, fetch REST state. There is no replay cursor.
 
 Errors: 401 unauthenticated/expired, 403 unauthorized/origin, 404 missing, 409 conflicts, 413 oversized, 422 invalid input, 429 throttled, 502 upstream failure, 503 unavailable infrastructure.

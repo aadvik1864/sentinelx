@@ -116,7 +116,7 @@ export function createWorkspace(now = new Date()) {
       event_type: "application_error",
       severity: "medium",
       source_ip: "198.51.100.18",
-      message: "GET /checkout 503 — upstream connection timed out",
+      message: "GET /checkout 503: upstream connection timed out",
       metadata: { http_status: 503 },
     }),
   );

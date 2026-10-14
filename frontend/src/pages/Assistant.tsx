@@ -73,7 +73,7 @@ export function AssistantPage() {
                 <option value="">Choose an investigation…</option>
                 {incidents?.items.map((incident) => (
                   <option value={incident.id} key={incident.id}>
-                    {incident.reference} — {incident.title}
+                    {incident.reference}: {incident.title}
                   </option>
                 ))}
               </select>
@@ -100,7 +100,7 @@ export function AssistantPage() {
           ) : (
             <Empty
               title={incidents?.total === 0 ? "No investigations to explain yet" : "Start with an investigation"}
-              description="Choose one above to see what happened, possible explanations, and suggested checks. The assistant reviews a limited sample—not every record."
+              description="Choose one above to see what happened, possible explanations, and suggested checks. The assistant reviews a limited sample, not every record."
             />
           )}
         </section>

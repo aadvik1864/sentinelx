@@ -33,7 +33,7 @@ POST /events or /events/raw
 
 ## Storage
 
-PostgreSQL is the Compose/default deployment database; SQLite is the explicit developer fallback. Alembic owns schema changes—application startup does not silently create tables. Startup bootstraps an administrator only when an explicit password is configured. A persistent audit marker makes default rule installation one-time, preserving rule edits/deletions across restarts.
+PostgreSQL is the Compose/default deployment database; SQLite is the explicit developer fallback. Alembic owns schema changes. Application startup does not silently create tables. Startup bootstraps an administrator only when an explicit password is configured. A persistent audit marker makes default rule installation one-time, preserving rule edits/deletions across restarts.
 
 Events are indexed by time/type/source and by the compound detection grouping key. The MVP uses bounded pagination but deliberately does not attempt a custom search datastore or enterprise-scale ingestion. Window evaluation loads candidate rows; sustained high-volume workloads need indexed aggregate queries, worker processing, and capacity testing.
 

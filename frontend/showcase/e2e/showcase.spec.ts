@@ -53,7 +53,7 @@ test("the public workflow is interactive without any backend or external request
   const guard = await guardNetwork(page);
   await page.goto("./#/dashboard");
   await expect(
-    page.getByText("Demo — synthetic data", { exact: true }),
+    page.getByText("Demo: synthetic data", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "3 alerts need a review" }),
@@ -174,7 +174,7 @@ test("mobile navigation, direct links and keyboard exploration work", async ({
       )
       .toBe(false);
     await expect(
-      page.getByText("Demo — synthetic data", { exact: true }),
+      page.getByText("Demo: synthetic data", { exact: true }),
     ).toBeVisible();
   }
   await page.setViewportSize({ width: 390, height: 900 });
@@ -252,6 +252,32 @@ test("practice investigations and downloads contain only example evidence", asyn
       "That example record does not exist. Choose one from the list.",
     ),
   ).toBeVisible();
+  expect(guard.unexpected).toEqual([]);
+  expect(guard.errors).toEqual([]);
+});
+
+test("demo pages do not display em dashes", async ({ page }) => {
+  const guard = await guardNetwork(page);
+  const emDash = String.fromCodePoint(0x2014);
+  for (const path of [
+    "dashboard",
+    "events",
+    "alerts",
+    "incidents",
+    "incidents/1",
+    "sources",
+    "ai-assistant",
+  ]) {
+    await page.goto(`./#/${path}`);
+    await expect(
+      page.getByRole("main").getByRole("heading", { level: 1 }),
+    ).toBeVisible();
+    await expect(page.locator("body")).not.toContainText(emDash);
+  }
+  await page.getByLabel("Investigation", { exact: true }).selectOption("1");
+  await page.getByRole("button", { name: "Explain", exact: true }).click();
+  await expect(page.getByText(/Browser-only sample summary/)).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(emDash);
   expect(guard.unexpected).toEqual([]);
   expect(guard.errors).toEqual([]);
 });

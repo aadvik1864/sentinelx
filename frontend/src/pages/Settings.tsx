@@ -59,7 +59,7 @@ function AddPerson({ close, added }: { close: () => void; added: () => void }) {
       <form className="stack-form" onSubmit={submit}>
         <p className="muted">
           Only add someone you trust. Read-only access includes this workspace’s
-          alerts, investigation evidence, and notes—not a private personal workspace.
+          alerts, investigation evidence, and notes. This is not a private personal workspace.
         </p>
         <label>
           Full name
@@ -391,7 +391,7 @@ export function SettingsPage() {
                           : "Unauthenticated"}
                       </td>
                       <td>
-                        <code>{entry.ip_address ?? "—"}</code>
+                        <code>{entry.ip_address ?? "Not recorded"}</code>
                       </td>
                     </tr>
                   ))}

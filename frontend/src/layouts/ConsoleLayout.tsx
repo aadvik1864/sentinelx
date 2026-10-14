@@ -140,7 +140,7 @@ export function ConsoleLayout() {
       {help && (
         <Modal title="A simple guide to SentinelX" onClose={() => setHelp(false)}>
           <div className="guide">
-            <p>SentinelX reads activity records from systems you connect and flags patterns that may need a closer look. An alert is a reason to investigate—not proof of an attack.</p>
+            <p>SentinelX reads activity records from systems you connect and flags patterns that may need a closer look. An alert is a reason to investigate, not proof of an attack.</p>
             <ol>
               <li><strong>Connect a system.</strong> An administrator adds a computer, website, or app in Connected systems. The person who manages the server may need to finish setup.</li>
               <li><strong>Check the connection.</strong> Connected systems shows whether activity can reach SentinelX. Quiet systems may have nothing new to report.</li>

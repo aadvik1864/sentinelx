@@ -145,7 +145,7 @@ function ShowcaseLayout() {
               <Menu size={21} />
             </button>
             <span className="breadcrumb">{active?.label ?? "Demo"}</span>
-            <span className="workspace-mode demo">Demo — synthetic data</span>
+            <span className="workspace-mode demo">Demo: synthetic data</span>
           </div>
           <div className="topbar-actions">
             <button

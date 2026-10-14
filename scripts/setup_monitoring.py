@@ -19,6 +19,26 @@ def private_write(path, content):
         file.write(content)
 
 
+def find_existing_source(sources, definition):
+    by_name = next((row for row in sources if row["name"] == definition["name"]), None)
+    if by_name is not None:
+        return by_name
+    # A display-name change must not provision another collector or replace its key.
+    matches = [
+        row
+        for row in sources
+        if all(
+            row.get(field) == definition[field]
+            for field in ("kind", "hostname", "log_path")
+        )
+    ]
+    if len(matches) > 1:
+        raise SystemExit(
+            "Several existing sources match this system. Review them before provisioning."
+        )
+    return matches[0] if matches else None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--install-service", action="store_true")
@@ -54,7 +74,7 @@ def main():
     )
     definitions = [
         {
-            "name": f"Linux host — {hostname}",
+            "name": f"Linux host: {hostname}",
             "kind": "linux",
             "hostname": hostname,
             "log_path": str(auth_log),
@@ -103,10 +123,10 @@ def main():
             )
         response = client.get("/api/v1/sources")
         response.raise_for_status()
-        by_name = {row["name"]: row for row in response.json()["items"]}
+        existing_sources = response.json()["items"]
         sources = []
         for definition in definitions:
-            prior = by_name.get(definition["name"])
+            prior = find_existing_source(existing_sources, definition)
             known = next(
                 (
                     row

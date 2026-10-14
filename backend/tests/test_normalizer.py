@@ -34,6 +34,7 @@ def test_web_and_json_normalization():
     line = f'203.0.113.42 - - [{date}] "GET /admin HTTP/1.1" 403 128 "-" "lab"'
     web = normalize(RawLog(source="nginx", hostname="web-lab", line=line))
     assert web.metadata["http_status"] == 403
+    assert web.message == "GET /admin: HTTP 403"
     application = normalize(
         RawLog(
             source="application",
@@ -49,6 +50,20 @@ def test_web_and_json_normalization():
         )
     )
     assert application.event_type == "authentication_failure"
+
+
+def test_json_web_message_uses_plain_punctuation():
+    web = normalize(
+        RawLog(
+            source="nginx",
+            hostname="web-lab",
+            line=json.dumps(
+                {"method": "POST", "path": "/login?private=omitted", "http_status": 401}
+            ),
+        )
+    )
+    assert web.message == "POST /login: HTTP 401"
+    assert web.metadata["path"] == "/login"
 
 
 def test_invalid_application_log():

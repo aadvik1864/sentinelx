@@ -331,7 +331,7 @@ export function EventsPage({ allowImport = true }: { allowImport?: boolean }) {
                       <Badge value={event.severity} severity />
                     </td>
                     <td>
-                      <code>{event.source_ip ?? "—"}</code>
+                      <code>{event.source_ip ?? "Not recorded"}</code>
                     </td>
                     <td>{event.hostname}</td>
                     <td>

@@ -243,7 +243,7 @@ export function IncidentsPage() {
                       <Badge value={incident.status} />
                     </td>
                     <td>
-                      <code>{incident.source_ip ?? "—"}</code>
+                      <code>{incident.source_ip ?? "Not recorded"}</code>
                     </td>
                     <td>{incident.hostname || "Not linked"}</td>
                     <td className="muted">{relative(incident.updated_at)}</td>

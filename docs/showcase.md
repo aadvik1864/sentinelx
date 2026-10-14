@@ -4,7 +4,7 @@ An interactive portfolio demo should show the workflow, not the private monitori
 
 ## Static demo build
 
-The showcase is a separate frontend entry point in `frontend/showcase/`. It reuses the overview, activity, alerts, investigation and assistant pages with a small in-memory dataset. No account or password is needed. Hostnames end in `.example.test`; addresses use reserved example ranges. A **Demo — synthetic data** label remains visible on mobile and desktop.
+The showcase is a separate frontend entry point in `frontend/showcase/`. It reuses the overview, activity, alerts, investigation and assistant pages with a small in-memory dataset. No account or password is needed. Hostnames end in `.example.test`; addresses use reserved example ranges. A **Demo: synthetic data** label remains visible on mobile and desktop.
 
 Visitors can filter activity, inspect the evidence graph, create practice investigations, add notes and change statuses. Those edits stay in one tab, with no cookies or browser-storage persistence. Reloading or choosing **Reset demo** discards them. Explanations are labeled browser-only sample summaries; no model, reputation provider or action executor is connected. Real record imports and account/collector setup are unavailable.
 

@@ -308,5 +308,6 @@ def test_application_telemetry_excludes_polling_and_secrets(monkeypatch):
         username="alice",
     )
     assert len(emitted) == 2
+    assert emitted[0]["message"] == "POST /unmatched: HTTP 201"
     assert "private" not in json.dumps(emitted)
     assert emitted[1]["event_type"] == "authentication_failure"
