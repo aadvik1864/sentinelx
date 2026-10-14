@@ -105,10 +105,17 @@ Hosted checks remain pending resource creation and deployment.
 - Upstash database: `cbe4d499-baea-4689-bfdd-22d8d26391ee`, free plan, Singapore.
 - Application/provider credentials are kept in the private ignored
   `.release/cloud/` directory. Owner credentials are not supplied to the API.
-- Automatic Git deployments are disabled for the API. Future database migrations
-  must run separately before manually redeploying it.
+- Vercel and Render automatically deploy pushes to `main` from
+  `aadvik1864/sentinelx`. Vercel builds from `frontend/`; Render builds
+  `backend/Dockerfile` with the repository root as its Docker context.
+- Database migrations still run separately with the migrator identity before
+  pushing backend changes that require a new schema.
 
 Hosted verification passed readiness through the proxy and directly on the API,
 browser sign-in, Secure/HttpOnly/SameSite=Strict refresh cookies, account-setup
 gating, session refresh, logout, and mobile layout. Authenticated live updates
 become available after the administrator completes their password/MFA setup.
+
+GitHub Pages remains a separate browser-only showcase built with
+`npm run build:showcase`. It publishes fictional records from `dist-showcase`,
+with no connection to the hosted application accounts or databases.

@@ -1,5 +1,5 @@
 # Free API with external Neon PostgreSQL and Upstash Redis.
-# This service is created through MCP; do not apply a duplicate Blueprint.
+# This service is managed directly; do not apply a duplicate Blueprint.
 previews:
   generation: 'off'
 services:
@@ -13,7 +13,7 @@ services:
   dockerContext: .
   dockerfilePath: backend/Dockerfile
   dockerCommand: python -m app.cloud_runtime
-  autoDeployTrigger: 'off'
+  autoDeployTrigger: commit
   healthCheckPath: /health/live
   maxShutdownDelaySeconds: 45
   envVars:
