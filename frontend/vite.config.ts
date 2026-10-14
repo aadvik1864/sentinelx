@@ -12,6 +12,7 @@ const showcaseBoundary: Plugin = {
   generateBundle() {
     const forbidden = [
       "src/services/api.ts",
+      "src/services/connection.ts",
       "src/store/AuthContext.tsx",
       "src/store/LiveContext.tsx",
       "src/pages/Login.tsx",

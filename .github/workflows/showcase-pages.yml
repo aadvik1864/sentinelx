@@ -1,0 +1,91 @@
+name: Publish synthetic showcase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/showcase-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcase-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Build only the browser-only showcase
+        run: npm run build:showcase
+        env:
+          VITE_BACKEND_ORIGIN: https://must-not-ship.invalid
+          VITE_SHOWCASE_CANARY: sentinelx-settings-must-not-ship
+      - run: npx playwright install --with-deps chromium
+      - name: Check workflows and reject backend/provider traffic
+        run: npm run test:showcase
+      - run: npm audit --audit-level=high
+      - name: Inspect the exact publication directory
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('dist-showcase')
+          public_files = {'index.html', 'favicon.svg', 'third-party-notices.txt', '_headers'}
+          suffixes = {'.js', '.css', '.svg', '.woff', '.woff2'}
+          canaries = (b'must-not-ship.invalid', b'sentinelx-settings-must-not-ship')
+          files = [path for path in root.rglob('*') if path.is_file()]
+          assert files and all((root / name).is_file() for name in public_files)
+          assert "connect-src 'none'" in (root / 'index.html').read_text()
+          for path in files:
+              relative = path.relative_to(root)
+              assert not path.is_symlink(), f'Symlink in public output: {relative}'
+              assert not any(part.startswith('.') for part in relative.parts), relative
+              assert str(relative) in public_files or (
+                  relative.parts[0] == 'assets' and path.suffix in suffixes
+              ), f'Unexpected public file: {relative}'
+              assert not any(value in path.read_bytes() for value in canaries), relative
+          print(f'Inspected {len(files)} static files; no settings, source maps or private artifacts.')
+          PY
+      - name: Upload only inspected static files
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: frontend/dist-showcase
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
