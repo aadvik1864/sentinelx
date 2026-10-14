@@ -7,6 +7,19 @@ import type { Plugin } from "vite";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const file = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
+// Keep Motion's bundled diagnostic consistent with the project's copy.
+const publicationPunctuation: Plugin = {
+  name: "publication-punctuation",
+  apply: "build",
+  renderChunk(code) {
+    const normalized = code.replaceAll(
+      ` times ${String.fromCodePoint(0x2014)} ignoring repeat option.`,
+      " times, ignoring repeat option.",
+    );
+    return normalized === code ? null : { code: normalized, map: null };
+  },
+};
+
 const showcaseBoundary: Plugin = {
   name: "showcase-boundary",
   generateBundle() {
@@ -40,7 +53,7 @@ export default defineConfig(({ mode }) => {
     base: showcase ? "./" : "/",
     publicDir: file("./public"),
     envPrefix: showcase ? [] : "VITE_",
-    plugins: [react(), tailwindcss(), ...(showcase ? [showcaseBoundary] : [])],
+    plugins: [react(), tailwindcss(), publicationPunctuation, ...(showcase ? [showcaseBoundary] : [])],
     resolve: {
       alias: showcase
         ? [
