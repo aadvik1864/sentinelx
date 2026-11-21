@@ -102,7 +102,7 @@ Hosted checks are recorded in the current deployment section below.
 - Backend: https://sentinelx-api-mn68.onrender.com
 - Render service: `srv-db7eo5m7bikc73ak6v80`, free plan, Singapore.
 - Neon project: `long-butterfly-04047585`, free plan, Singapore.
-- Upstash database: `cbe4d499-baea-4689-bfdd-22d8d26391ee`, free plan, Singapore.
+- Upstash database: `sentinelx-redis-recovery`, free plan, Singapore (replacement provisioned 2026-11-21).
 - Application/provider credentials are kept in the private ignored
   `.release/cloud/` directory. Owner credentials are not supplied to the API.
 - Vercel and Render automatically deploy pushes to `main` from
@@ -122,3 +122,35 @@ become available after the administrator completes their password/MFA setup.
 GitHub Pages remains a separate browser-only showcase built with
 `npm run build:showcase`. It publishes fictional records from `dist-showcase`,
 with no connection to the hosted application accounts or databases.
+
+## Recover an unavailable Redis connection
+
+A free Upstash resource can be archived after inactivity. Its previous hostname
+may stop resolving even though the Render process and Neon database remain
+healthy. Verify both `/health/live` and `/health/ready`: a responding process
+alone does not establish that authentication or live updates work. Session
+endpoints deliberately return 503 when the production rate limiter is unavailable;
+do not disable Redis or weaken rate limiting to hide the outage.
+
+1. Check the resource in Vercel Storage and Upstash. Confirm whether it is
+   available, archived, or uninstalled before changing application code.
+2. Restore it when supported, or provision a separate replacement on the approved
+   free plan in the same region. Keep eviction and automatic paid upgrades off.
+   Follow the provider's recovery steps for any retained backup. SentinelX's
+   accounts, events and investigations live in PostgreSQL, not Redis.
+3. Retrieve the new TLS Redis URL privately and verify PING and pub/sub. Update
+   only `REDIS_URL` on the SentinelX Render service and its private deployment
+   configuration. Do not change JWT, MFA or database credentials.
+4. Deploy the backend with the updated environment. Check readiness directly and
+   through Vercel, then verify session endpoints no longer report an unavailable
+   rate limiter. Check authenticated updates with an authorized user session.
+5. If a temporary Vercel development connection was used to obtain the URL,
+   disconnect it after configuring Render. Never expose Redis credentials in
+   production frontend build variables or source control.
+
+Recovery on 2026-11-21 replaced the uninstalled `sentinelx-redis` resource with
+`sentinelx-redis-recovery`. Existing PostgreSQL accounts and evidence were retained.
+Free hosting still has idle suspension and quota limits; it is unsuitable for
+an unattended guarantee of continuous security monitoring. Provider references:
+[Upstash inactivity FAQ](https://upstash.com/docs/redis/help/faq) and
+[backup and restore](https://upstash.com/docs/redis/features/backup).
