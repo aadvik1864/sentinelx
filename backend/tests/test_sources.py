@@ -275,7 +275,7 @@ def test_agent_download(client, tokens):
 
 
 def test_live_monitoring_cannot_enable_demo():
-    with pytest.raises(ValueError, match="Live monitoring requires"):
+    with pytest.raises(ValueError, match="Demo functionality has been removed"):
         Settings(live_monitoring=True, demo_mode=True, seed_demo=False)
 
 

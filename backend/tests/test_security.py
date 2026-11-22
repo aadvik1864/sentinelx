@@ -315,7 +315,10 @@ def test_xss_is_stored_as_data_not_html(client, tokens):
     assert response.json()["message"] == '<script>alert("xss")</script>'
 
 
-def test_simulator_disabled_and_production_configuration(client, tokens):
+def test_removed_simulator_has_no_route(client, tokens):
+    from app.main import app
+
+    assert all(not path.startswith("/api/v1/demo") for path in app.openapi()["paths"])
     assert client.post("/api/v1/demo/simulate", headers=tokens["admin"]).status_code == 404
     with pytest.raises(ValueError):
         Settings(_env_file=None, environment="production", jwt_secret="short")
@@ -329,3 +332,9 @@ def test_admin_cannot_demote_self(client, tokens):
         ).status_code
         == 409
     )
+
+
+@pytest.mark.parametrize("flag", ["demo_mode", "seed_demo"])
+def test_removed_demo_flags_cannot_be_enabled(flag):
+    with pytest.raises(ValueError, match="Demo functionality has been removed"):
+        Settings(_env_file=None, **{flag: True})

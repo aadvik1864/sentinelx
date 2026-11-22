@@ -2199,7 +2199,6 @@ tbody tr:hover {
 .calm-console .topbar-left, .calm-console .topbar-actions { gap: 16px; min-width: 0; }
 .calm-console .breadcrumb { font-size: 13px; color: var(--muted); }
 .workspace-mode { display: inline-flex; align-items: center; padding: 5px 9px; border: 1px solid #344d58; color: #a7d6cb; border-radius: 5px; font-size: 11px; white-space: nowrap; }
-.workspace-mode.demo { border-color: #66533c; color: #e8cb7c; }
 .calm-console .global-search input { font-size: 13px; width: 180px; }
 .calm-console .connection-chip { font-size: 12px; background: none; border: 0; padding: 4px 0; white-space: nowrap; }
 .calm-console .icon-button { min-width: 36px; width: 36px; height: 36px; }
@@ -2234,7 +2233,6 @@ tbody tr:hover {
 .calm-console .confidence { font-size: 12px; }
 .calm-console .tabs button, .calm-console .context-panel label, .calm-console .context-panel select, .calm-console .assistant-selector > label, .calm-console .assistant-selector select { font-size: 13px; }
 .calm-console .assistant-safety p, .calm-console .assistant-safety ul { font-size: 14px; }
-.practice-notice { color: #e8cb7c; font-size: 13px; padding: 13px 0; margin-bottom: 20px; border-bottom: 1px solid #504436; }
 .overview-review { display: flex; align-items: center; gap: 20px; padding: 26px 28px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 24px; }
 .overview-review > div { flex: 1; min-width: 0; }
 .overview-review h2 { font-size: 23px; letter-spacing: -0.3px; }
@@ -2300,9 +2298,6 @@ tbody tr:hover {
 .collection-totals dt { color: var(--muted); }
 .collection-totals dd { margin: 0; }
 .download-summary { margin-top: 12px; }
-.practice-action { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 15px; margin-top: 18px; }
-.practice-action h3 { font-size: 16px; }
-.practice-action p { color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.75; }
 .connection-explainer { margin-top: 0; margin-bottom: 24px; padding-top: 0; border-top: 0; }
 .systems-list { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; background: var(--surface); }
 .system-row { padding: 26px; }
@@ -2384,7 +2379,6 @@ tbody tr:hover {
   .overview-stats .metric > strong { font-size: 31px; }
   .overview-stats .metric-label { font-size: 13px; }
   .overview-stats .metric-note { font-size: 12px; }
-  .practice-action { flex-direction: column; align-items: flex-start; }
   .calm-console .console-footer { padding-inline: 20px; }
 }
 @media (max-width: 600px) {

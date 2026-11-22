@@ -50,7 +50,7 @@ async function mockWorkspace(page: Page, extra?: (route: Route, path: string) =>
           id: 1, name: "Interface tester", email: "tester@example.test", role: "ADMIN",
         } }; break;
       case "/system":
-        json = { version: "test", environment: "browser-fixture", demo_mode: true,
+        json = { version: "test", environment: "browser-fixture", demo_mode: false,
           live_monitoring: false, ai_provider: "offline", threat_intel_provider: "unconfigured" }; break;
       case "/dashboard":
         json = { total_events: 1, active_alerts: 1, critical_alerts: 0, open_incidents: 1,
@@ -196,7 +196,7 @@ test("local AI labels and privacy guidance remain readable on small screens", as
   const errors = await mockWorkspace(page, async (route, path) => {
     if (path === "/system") {
       await route.fulfill({ json: {
-        version: "test", environment: "browser-fixture", demo_mode: true,
+        version: "test", environment: "browser-fixture", demo_mode: false,
         live_monitoring: false, ai_provider: "ollama", ai_model: model,
         threat_intel_provider: "unconfigured",
       } });

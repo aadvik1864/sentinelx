@@ -62,7 +62,7 @@ Use all three Compose files for subsequent backend/gateway operations; the base 
 5. Review existing accounts and admit only verified trusted people. Production MFA gates apply to existing accounts as well. This is a shared workspace, not customer isolation; email ownership is not automatically verified.
 6. Enable optional integrations only after reviewing lawful log handling, provider permissions, retention, egress, and costs.
 
-Do not assume changing the environment flag configures TLS, firewall rules, cloud secrets, monitoring, or storage encryption. The main CI workflow validates/builds the application; the hosted Vercel and Render Git integrations deploy `main`, and the separate Pages workflow publishes only the synthetic showcase. See the [cloud deployment guide](cloud-deployment.md).
+Do not assume changing the environment flag configures TLS, firewall rules, cloud secrets, monitoring, or storage encryption. The main CI workflow validates/builds the application; the hosted Vercel and Render Git integrations deploy `main`. See the [cloud deployment guide](cloud-deployment.md).
 
 ## Prepared production release
 
@@ -80,7 +80,7 @@ Separately encrypt and protect configuration, the MFA key, and collector configu
 
 - Initial sign-in: use the exact email/password in `.env`, not a shared demo password. Passwords are applied only when creating an absent administrator; changing the environment variable does not reset an existing account.
 - Missing tables: run `alembic upgrade head` for the local SQLite backend.
-- Empty dashboard: either ingest data or set `SEED_DEMO=true` for first-run sample seeding in development. Seeding does not replace existing events.
+- Empty dashboard: connect an authorized system and run its collector, or ingest real records. New installations do not generate activity automatically.
 - “Polling” instead of “Live”: check the WebSocket upgrade path, exact allowed origin, session validity, and Redis. REST refresh remains active every 30 seconds.
 - Port conflict: stop the conflicting service or deliberately change port, allowed origin, and CSP together.
 - Provider errors: verify authorized keys/network access. SentinelX returns an upstream error rather than inventing an assessment.

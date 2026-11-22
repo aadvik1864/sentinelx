@@ -112,6 +112,6 @@ The user service runs with your user's existing permissions and Docker access. D
 
 For a collector restart, use `systemctl --user restart sentinelx-collector`. For diagnostic output, use `journalctl --user -u sentinelx-collector`; do not share raw host/container logs without review.
 
-To revisit the demo, stop the local collector, set `POSTGRES_DATABASE=sentinelx`, `LIVE_MONITORING=false`, and restore your previous demo flags. Recreate backend/frontend and then Nginx as above. Never use `docker compose down -v` to switch modes. Browser investigation tests that insert simulations belong in demo mode, not the real database.
+Keep existing records and volumes when changing installations. Browser tests insert fixtures only into explicitly disposable test installations.
 
 See [collector delivery details and limitations](collectors.md) before treating collection as a security control.

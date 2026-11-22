@@ -91,8 +91,8 @@ export function ConsoleLayout() {
             <button className="icon-button mobile-only" aria-label="Open navigation" onClick={() => setMenu(true)}><Menu size={21} /></button>
             <span className="breadcrumb">{active?.label ?? "Settings"}</span>
             {system && (
-              <span className={`workspace-mode ${system.demo_mode ? "demo" : ""}`}>
-                {system.demo_mode ? "Practice data" : system.live_monitoring ? "Real activity" : "Your workspace"}
+              <span className="workspace-mode">
+                {system.live_monitoring ? "Real activity" : "Your workspace"}
               </span>
             )}
           </div>
@@ -129,7 +129,6 @@ export function ConsoleLayout() {
         </header>
         <main className="main-content">
           <ErrorBox message={error} />
-          {system?.demo_mode && <div className="practice-notice">You’re viewing practice data, not activity from real systems.</div>}
           <Outlet />
         </main>
         <footer className="console-footer">

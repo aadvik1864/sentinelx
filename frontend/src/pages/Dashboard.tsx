@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, Bell, CheckCheck, ChevronRight,
-  FileText, Play, Radio, RefreshCw, ShieldAlert,
+  FileText, Radio, RefreshCw, ShieldAlert,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Badge, ErrorBox, Loading, PageHeader, relative, severities, useToast,
 } from "../components/ui";
@@ -16,45 +16,28 @@ import { CountUp } from "../components/react-bits/CountUp";
 import { SpotlightCard } from "../components/react-bits/SpotlightCard";
 import { SourceHealth } from "../components/SourceHealth";
 import { SegmentedControl } from "../components/SegmentedControl";
-import { api, errorMessage, reconcile } from "../services/api";
+import { reconcile } from "../services/api";
 import { priorityLabels } from "../utils/labels";
 import type {
-  Alert, DashboardMetrics, Incident, Page, SystemInfo, LogSource,
+  Alert, DashboardMetrics, Incident, Page, LogSource,
 } from "../types";
 
 export function DashboardPage() {
   const { data, error, loading, reload } = useResource<DashboardMetrics>("/dashboard");
   const { data: alerts, error: alertsError } = useResource<Page<Alert>>("/alerts?limit=4&status=open");
   const { data: incidents, error: incidentsError } = useResource<Page<Incident>>("/incidents?limit=3&status=open");
-  const { data: system } = useResource<SystemInfo>("/system");
   const { user } = useAuth();
   const { data: sources, error: sourcesError } = useResource<{ items: LogSource[] }>(
     user?.role === "VIEWER" ? null : "/sources",
   );
-  const [simulating, setSimulating] = useState(false);
   const [activityHours, setActivityHours] = useState(24);
   const notify = useToast();
-  const navigate = useNavigate();
   const canInvestigate = user?.role !== "VIEWER";
   const connectionIssues = sources?.items.filter((source) =>
     ["offline", "error", "not_connected"].includes(source.status),
   ) ?? [];
   const activity = data?.activity.slice(-activityHours) ?? [];
   const shownRecords = activity.reduce((total, point) => total + point.events, 0);
-
-  async function simulate() {
-    setSimulating(true);
-    try {
-      const { data: result } = await api.post<{ incident_id: number }>("/demo/simulate");
-      reconcile();
-      notify("Practice activity added. Your example investigation is ready.");
-      navigate(`/incidents/${result.incident_id}`);
-    } catch (err) {
-      notify(errorMessage(err), true);
-    } finally {
-      setSimulating(false);
-    }
-  }
 
   function exportSnapshot() {
     if (!data) return;
@@ -265,15 +248,6 @@ export function DashboardPage() {
               </section>
             </div>
           </details>
-
-          {system?.demo_mode && user?.role === "ADMIN" && (
-            <section className="practice-action">
-              <div><h3>Want to see how an investigation works?</h3><p>This adds a clearly marked practice example, not a real attack.</p></div>
-              <button className="button secondary" onClick={simulate} disabled={simulating}>
-                <Play size={15} />{simulating ? "Preparing example…" : "Try a practice example"}
-              </button>
-            </section>
-          )}
         </>
       )}
     </>

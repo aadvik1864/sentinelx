@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 
 const email = process.env.SENTINELX_E2E_EMAIL ?? "admin@sentinelx.dev";
 const password = process.env.SENTINELX_E2E_PASSWORD;
+let fixtureIncident: number | null = null;
 test.skip(
-  !password,
-  "Set SENTINELX_E2E_PASSWORD to a development administrator password.",
+  !password || process.env.SENTINELX_E2E_FIXTURE_WRITES !== "1",
+  "Use an explicitly disposable development installation and enable E2E fixture writes.",
 );
 
 test.beforeEach(async ({ page }) => {
@@ -16,18 +17,45 @@ test.beforeEach(async ({ page }) => {
       new URL(response.url()).pathname === "/api/v1/system" &&
       response.status() === 200,
   );
+  const signedIn = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/auth/login");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const session = await (await signedIn).json();
   const system = await (await systemResponse).json();
   test.skip(
-    !system.demo_mode,
-    "Investigation fixtures require demo mode; real monitoring is left untouched.",
+    system.environment !== "development" || system.live_monitoring ||
+      !["localhost", "127.0.0.1", "[::1]"].includes(new URL(page.url()).hostname),
+    "Fixtures run only on loopback development installations with live monitoring disabled.",
   );
+  if (fixtureIncident === null) {
+    const start = Date.now() - 50000;
+    const records = Array.from({ length: 12 }, (_, index) => ({
+      offset: index * 2000, event_type: "authentication_failure", severity: "medium",
+      message: "Failed password for admin from 203.0.113.42 port 52412 ssh2",
+    }));
+    records.push(
+      { offset: 30000, event_type: "authentication_success", severity: "low", message: "Accepted password for admin from 203.0.113.42" },
+      { offset: 35000, event_type: "privilege_escalation", severity: "high", message: "sudo: admin : USER=root ; COMMAND=/usr/bin/id" },
+    );
+    for (const { offset, ...record } of records) {
+      const response = await page.request.post("/api/v1/events", {
+        headers: { Authorization: `Bearer ${session.access_token}`, Origin: new URL(page.url()).origin },
+        data: { ...record, timestamp: new Date(start + offset).toISOString(), source: "linux",
+          source_ip: "203.0.113.42", hostname: "linux-lab-01", username: "admin",
+          metadata: { test_fixture: true } },
+      });
+      expect(response.status()).toBe(201);
+      const result = await response.json();
+      fixtureIncident = result.incident_id ?? fixtureIncident;
+    }
+    expect(fixtureIncident).not.toBeNull();
+    await page.reload();
+  }
   await expect(
     page.getByRole("heading", { name: "Your security overview" }),
   ).toBeVisible();
 });
 
-test("login, live dashboard, simulation, investigation, analysis, and resolution", async ({
+test("login, live dashboard, investigation, analysis, and resolution", async ({
   page,
 }) => {
   await expect(
@@ -44,7 +72,8 @@ test("login, live dashboard, simulation, investigation, analysis, and resolution
     fullPage: true,
     animations: "disabled",
   });
-  await page.getByRole("button", { name: "Try a practice example" }).click();
+  await expect(page.getByRole("button", { name: "Try a practice example" })).toHaveCount(0);
+  await page.goto(`/incidents/${fixtureIncident}`);
   await expect(page).toHaveURL(/\/incidents\/\d+/);
   await expect(
     page.getByRole("heading", {
@@ -155,7 +184,7 @@ test("alert acknowledgment and server-backed rule edits", async ({ page }) => {
   await expect(
     page.locator("tr").filter({ hasText: "SSH brute force" }),
   ).toContainText("≥ 11");
-  // Restore the configured starter threshold; this test must not alter subsequent demo semantics.
+  // Restore the configured starter threshold; this test must not alter subsequent test fixtures.
   await page
     .getByRole("button", { name: "Edit SSH brute force", exact: true })
     .click();

@@ -98,6 +98,10 @@ Hosted checks are recorded in the current deployment section below.
 
 ## Current deployment
 
+Only the authenticated live application is published. GitHub Pages was disabled
+on 2026-11-22; the former public demo and product simulator have been removed.
+Activity is received from connected systems rather than generated automatically.
+
 - Frontend: https://sentinelx-fawn.vercel.app
 - Backend: https://sentinelx-api-mn68.onrender.com
 - Render service: `srv-db7eo5m7bikc73ak6v80`, free plan, Singapore.
@@ -118,10 +122,6 @@ Hosted verification passed readiness through the proxy and directly on the API,
 browser sign-in, Secure/HttpOnly/SameSite=Strict refresh cookies, account-setup
 gating, session refresh, logout, and mobile layout. Authenticated live updates
 become available after the administrator completes their password/MFA setup.
-
-GitHub Pages remains a separate browser-only showcase built with
-`npm run build:showcase`. It publishes fictional records from `dist-showcase`,
-with no connection to the hosted application accounts or databases.
 
 ## Recover an unavailable Redis connection
 

@@ -12,7 +12,6 @@ from app.api import (
     assets,
     auth,
     dashboard,
-    demo,
     events,
     incidents,
     passkeys,
@@ -24,7 +23,7 @@ from app.api import (
 from app.core.clock import clock_guard
 from app.core.config import get_settings
 from app.core.database import SessionLocal
-from app.seed import bootstrap, seed_demo
+from app.seed import bootstrap
 from app.services.telemetry import record_request
 from app.websocket.broker import broker
 from app.websocket.broker import router as websocket_router
@@ -55,8 +54,6 @@ async def lifespan(app):
                     )
             else:
                 bootstrap(db)
-            if config.seed_demo and config.environment == "development":
-                seed_demo(db)
         await broker.start()
         try:
             yield
@@ -162,7 +159,6 @@ for module in [
     dashboard,
     threat_intel,
     ai,
-    demo,
     settings,
     sources,
 ]:

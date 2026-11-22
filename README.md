@@ -2,14 +2,11 @@
 
 SentinelX helps you review activity from computers, websites, and apps. It brings logs, alerts, and investigations into one place so you can see what happened and what to check next.
 
-## Try it
+## Live application
 
-- **[Live dashboard](https://sentinelx-fawn.vercel.app)**: Sign in to use the full app. Connect your systems to receive real activity.
-- **[Interactive demo](https://aadvik1864.github.io/sentinelx/)**: Try the main features without an account. All records are fictional.
+**[Open the live dashboard](https://sentinelx-fawn.vercel.app)**. Sign in and connect your systems to receive real activity.
 
 The live app stores your workspace's records in a database. There is no public sign-up. Ask the workspace administrator for access. On your first sign-in, choose your own password and set up an authenticator or passkey.
-
-The demo lets you explore alerts, add practice notes, and change investigation statuses. Your changes stay in that browser tab and disappear when you reload or choose **Reset demo**. It has no connection to real systems or the live app's accounts and records.
 
 ## What you can do
 
@@ -30,7 +27,7 @@ Adding a website URL alone does not give SentinelX access to its activity. See t
 
 ## Built with
 
-React handles the interface. FastAPI handles requests, PostgreSQL stores records, and Redis helps deliver live updates. The full app runs on Vercel and Render. The demo runs on GitHub Pages.
+React handles the interface. FastAPI handles requests, PostgreSQL stores records, and Redis helps deliver live updates. The full app runs on Vercel and Render.
 
 ## Run on your computer
 
@@ -47,10 +44,10 @@ Open [localhost:8080](http://localhost:8080). The setup script saves local sign-
 
 ## Updates and limits
 
-Pushing code to `main` automatically updates the live app. The demo updates when interface files or its publishing workflow change. Changes to the database structure need a separate migration before releasing code that uses them. See the [hosting guide](docs/cloud-deployment.md) for details.
+Pushing code to `main` automatically updates the live app. Changes to the database structure need a separate migration before releasing code that uses them. See the [hosting guide](docs/cloud-deployment.md) for details.
 
 The free backend pauses when idle, so opening the live app can take a little time. The hosted assistant currently uses offline summaries. This is a monitoring prototype for learning and investigation, with no guarantee of continuous monitoring or system safety.
 
-For more details, see [local setup](docs/deployment.md), [the demo guide](docs/showcase.md), and [security](docs/security.md).
+For more details, see [local setup](docs/deployment.md) and [security](docs/security.md).
 
 SentinelX's own code uses the [MIT license](LICENSE). Adapted components keep their [original licenses and credits](frontend/public/third-party-notices.txt).

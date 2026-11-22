@@ -1,4 +1,4 @@
-# Collectors and simulator
+# Collectors
 
 ## Monitoring agent (real sources)
 
@@ -40,13 +40,3 @@ Sudo logs often omit source IPs. Such events produce standalone privileged-activ
 ### Legacy delivery limitations
 
 The collector stops visibly on a rejected record, connection failure, or rate limit. It does not silently discard failed lines, implement persistent offsets, automatically recover rotations, or promise exactly-once delivery. Refresh tokens rotate when access expires, and the session is logged out after a completed non-following import. Restarting the collector can duplicate records.
-
-## Isolated simulator
-
-The UI simulator and CLI call the same administrator-only API, which requires `ENVIRONMENT=development` and `DEMO_MODE=true`.
-
-```bash
-.venv/bin/python scripts/simulate.py
-```
-
-Only synthetic record insertion occurs. The sequence uses 12 failed logins, success, and a privileged command record; it never executes the command. Source IPs are chosen from `203.0.113.0/24`, reserved for documentation, and events contain `metadata.simulated=true`. The CLI rejects non-loopback API destinations. The development gateway itself binds only to loopback by default.

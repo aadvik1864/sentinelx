@@ -50,11 +50,6 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - name: Build the isolated static showcase
-        run: npm run build:showcase
-      - run: npx playwright install --with-deps chromium
-      - name: Showcase browser and network-isolation checks
-        run: npm run test:showcase
       - run: npm audit --audit-level=high
 
   container-smoke:
@@ -67,6 +62,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
       - run: python scripts/init_env.py
+      - name: Use an isolated browser-test installation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.env')
+          path.write_text(path.read_text().replace('LIVE_MONITORING=true', 'LIVE_MONITORING=false'))
+          PY
       - run: docker compose up --build --wait --wait-timeout 240
       - run: npm ci && npx playwright install --with-deps chromium
         working-directory: frontend
@@ -75,7 +77,7 @@ jobs:
         run: |
           export SENTINELX_E2E_PASSWORD=$(sed -n 's/^BOOTSTRAP_ADMIN_PASSWORD=//p' ../.env)
           echo "::add-mask::$SENTINELX_E2E_PASSWORD"
-          npm run test:e2e
+          SENTINELX_E2E_FIXTURE_WRITES=1 npm run test:e2e
       - if: failure()
         run: docker compose ps --all
       # Never upload browser traces/videos/captures, which can contain fixture credentials.

@@ -67,8 +67,10 @@ class Settings(BaseSettings):
                 raise ValueError("MFA_ENCRYPTION_KEY must be a Fernet key") from None
         if self.environment not in {"development", "test", "production"}:
             raise ValueError("ENVIRONMENT must be development, test, or production")
-        if self.live_monitoring and (self.demo_mode or self.seed_demo):
-            raise ValueError("Live monitoring requires DEMO_MODE=false and SEED_DEMO=false")
+        if self.demo_mode or self.seed_demo:
+            raise ValueError(
+                "Demo functionality has been removed; set DEMO_MODE=false and SEED_DEMO=false"
+            )
         if not self.hosts or any("*" in host for host in self.hosts):
             raise ValueError(
                 "ALLOWED_HOSTS must explicitly list trusted hostnames, without wildcards"
@@ -134,8 +136,6 @@ class Settings(BaseSettings):
                 )
             if not self.redis_url or not self.database_url.startswith("postgresql"):
                 raise ValueError("Production requires PostgreSQL and Redis")
-            if self.demo_mode or self.seed_demo:
-                raise ValueError("Demo mode and demo seeding must be disabled in production")
             if not self.origins:
                 raise ValueError("Production requires explicit HTTPS origins")
             for origin in self.origins:

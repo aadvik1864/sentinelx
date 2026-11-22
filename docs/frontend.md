@@ -35,5 +35,3 @@ The sidebar's **How to use SentinelX** guide explains the workflow without requi
 - **Go to** opens a page picker with **Ctrl/⌘ + K**. It searches page names, supports arrow keys/Enter/Escape, traps focus while open, restores focus when closed, and lists only pages available to the current role. It does not invoke assistant generation or execute actions.
 
 Public previews: [overview](screenshots/overview-practice.png), [mobile overview](screenshots/overview-mobile.png), [investigation](screenshots/plain-language-investigation.png), and [sign-in](screenshots/login.png). Overview/investigation previews use browser-only practice data, not live records. Installation-specific captures and the older recording remain local and are excluded from Git.
-
-The [interactive showcase](showcase.md) reuses these pages in a separate static build with fictional records and tab-local practice edits. It includes no monitoring session, backend client or live sockets. Hosting is a separate choice; the existing installation is not exposed by building it.

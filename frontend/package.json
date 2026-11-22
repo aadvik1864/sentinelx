@@ -6,13 +6,10 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "build:showcase": "tsc -b && vite build --mode showcase",
-    "preview:showcase": "vite preview --mode showcase --host 127.0.0.1",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:showcase": "playwright test --config showcase/playwright.config.ts"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.5",

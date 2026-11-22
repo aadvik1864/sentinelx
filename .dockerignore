@@ -1,6 +1,8 @@
 .git
 .env
 .env.*
+**/.env
+**/.env.*
 .venv
 .state
 .release
@@ -19,7 +21,6 @@ docs/screenshots
 **/*.har
 **/node_modules
 **/dist
-**/dist-showcase
 **/*.tsbuildinfo
 **/__pycache__
 **/.pytest_cache
