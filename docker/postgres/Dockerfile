@@ -1,4 +1,4 @@
-FROM postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+FROM postgres:19-alpine@sha256:8b0ff4cdf221f0c53d7fcda681d3b461be725c492cd881c5ec9c0ad25023f188
 # Keep upstream initialization, but use Alpine's small account-switching binary.
 # Explicit removal also makes the old executable absent from the final image/SBOM.
 RUN apk upgrade --no-cache \
